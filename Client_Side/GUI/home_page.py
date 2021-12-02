@@ -7,13 +7,24 @@ class HomePage(GUIForm):
 
     def __init__(self, client):
         super().__init__(client)
-
         self.scroll_frame = self.set_scrollbar()
+        Label(self.scroll_frame, text="Welcome to PERSTAGRAM!", font=("Helvetica 18 bold", 25)).pack(pady=15, padx=10,
+                                                                                                     fill='x',
+                                                                                                     expand=True)
+
+        # Create A Bottom Bar Frame
+        bar_frame = Frame(self.root)
+        bar_frame.pack()
+
+        Button(bar_frame, text="Home").grid(row=0, column=0)
+        Button(bar_frame, text="Search").grid(row=0, column=1)
 
         for thing in range(100):
-            Button(self.scroll_frame, text=f'Button {thing} Yo!').grid(row=thing, column=0, pady=10, padx=10)
+            Button(self.scroll_frame, text=f'Button {thing + 1} Yo!').pack(pady=10, padx=10, fill='x')
 
-        my_label = Label(self.scroll_frame, text="It's Friday Yo!").grid(row=3, column=2)
+
+    def on_mousewheel(self, event):
+        self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
     def set_scrollbar(self):
         # Create A Main Frame
@@ -21,22 +32,24 @@ class HomePage(GUIForm):
         main_frame.pack(fill=BOTH, expand=1)
 
         # Create A Canvas
-        my_canvas = Canvas(main_frame)
-        my_canvas.pack(side=LEFT, fill=BOTH, expand=1)
+        self.canvas = Canvas(main_frame)
+        self.canvas.pack(side=LEFT, fill=BOTH, expand=1)
+
+        self.canvas.bind_all("<MouseWheel>", self.on_mousewheel)
 
         # Add A Scrollbar To The Canvas
-        my_scrollbar = Scrollbar(main_frame, orient=VERTICAL, command=my_canvas.yview)
-        my_scrollbar.pack(side=RIGHT, fill=Y)
+        self.scrollbar = Scrollbar(main_frame, orient=VERTICAL, command=self.canvas.yview)
+        self.scrollbar.pack(side=RIGHT, fill=Y)
 
         # Configure The Canvas
-        my_canvas.configure(yscrollcommand=my_scrollbar.set)
-        my_canvas.bind('<Configure>', lambda e: my_canvas.configure(scrollregion=my_canvas.bbox("all")))
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+        self.canvas.bind('<Configure>', lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
 
         # Create ANOTHER Frame INSIDE the Canvas
-        scroll_frame = Frame(my_canvas)
+        scroll_frame = Frame(self.canvas)
 
         # Add that New frame To a Window In The Canvas
-        my_canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
+        self.canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
 
         return scroll_frame
 

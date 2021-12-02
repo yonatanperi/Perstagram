@@ -53,6 +53,7 @@ class SQL:
                     username VARCHAR({self.NAME_MAX_LENGTH}) NOT NULL,
                     FOREIGN KEY (username) REFERENCES users_info(username) ON DELETE CASCADE,
                     bio VARCHAR({self.BIO_MAX_LENGTH}),
+                    open BOOLEAN,
                     last_post_date DATETIME,
                     last_story_date DATETIME)""")
 
@@ -193,12 +194,8 @@ class SQL:
 
         self.db.commit()
 
-        self.register_admin()
+        self.create_tables()
     
     @staticmethod
     def sha256(string):
         return hashlib.sha224(string.encode()).hexdigest()
-
-
-s = SQL()
-s.reset_db()
