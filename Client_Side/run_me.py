@@ -6,7 +6,7 @@ def main():
     client = Client()
     client.connect("localhost", 1234)
 
-    LoRe(client)
+    LoRe(client).run()
 
 
 if __name__ == '__main__':

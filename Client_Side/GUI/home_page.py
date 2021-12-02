@@ -1,4 +1,5 @@
 from .gui_form import GUIForm
+from .upload_page import UploadPage
 from tkinter import *
 from tkinter.ttk import *
 
@@ -13,15 +14,14 @@ class HomePage(GUIForm):
                                                                                                      expand=True)
 
         # Create A Bottom Bar Frame
-        bar_frame = Frame(self.root)
-        bar_frame.pack()
+        self.bar_frame = Frame(self.root)
+        self.bar_frame.pack()
 
-        Button(bar_frame, text="Home").grid(row=0, column=0)
-        Button(bar_frame, text="Search").grid(row=0, column=1)
+        Button(self.bar_frame, text="Search", command=lambda: self.go_to_page("SearchPage")).grid(row=0, column=0)
+        Button(self.bar_frame, text="Upload", command=lambda: self.go_to_page(UploadPage, HomePage)).grid(row=0, column=1)
 
         for thing in range(100):
             Button(self.scroll_frame, text=f'Button {thing + 1} Yo!').pack(pady=10, padx=10, fill='x')
-
 
     def on_mousewheel(self, event):
         self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
@@ -52,6 +52,3 @@ class HomePage(GUIForm):
         self.canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
 
         return scroll_frame
-
-    def run(self):
-        self.root.mainloop()

@@ -45,13 +45,9 @@ class LoRe(GUIForm):
         self.error_text = StringVar()
         Label(self.root, textvariable=self.error_text, wraplength=250).grid(ipady=20, row=4, columnspan=4)
 
-        # run everything
-        self.root.mainloop()
-
     def lo_re(self, *args):
         if self.client.get_answer(args):
-            self.root.destroy()
-            HomePage(self.client).run()
+            self.go_to_page(HomePage)
         else:
             self.error_text.set("Something went wrong...\nPlease try again with different values.")
 

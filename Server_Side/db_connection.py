@@ -97,15 +97,15 @@ class SQL:
         self.cursor.execute(f"CREATE SCHEMA IF NOT EXISTS {username}")
         self.cursor.execute(
             f"""CREATE TABLE IF NOT EXISTS {username}.posts (
-                    post_id INT NOT NULL PRIMARY KEY,
-                    date DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    byte_photo BLOB NOT NULL)""")
+                    id INT NOT NULL PRIMARY KEY,
+                    date DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                    byte_photo MEDIUMBLOB NOT NULL)""")
 
         self.cursor.execute(
             f"""CREATE TABLE IF NOT EXISTS {username}.comments (
                     comment_id INT NOT NULL PRIMARY KEY,
                     post_id INT NOT NULL,
-                    FOREIGN KEY (post_id) REFERENCES {username}.posts(post_id) ON DELETE CASCADE,
+                    FOREIGN KEY (post_id) REFERENCES {username}.posts(id) ON DELETE CASCADE,
                     username VARCHAR({self.NAME_MAX_LENGTH}) NOT NULL,
                     FOREIGN KEY (username) REFERENCES perstagram.users_info(username) ON DELETE CASCADE,
                     comment VARCHAR({self.BIO_MAX_LENGTH}))""")
@@ -113,15 +113,15 @@ class SQL:
         self.cursor.execute(
             f"""CREATE TABLE IF NOT EXISTS {username}.likes (
                             post_id INT NOT NULL,
-                            FOREIGN KEY (post_id) REFERENCES {username}.posts(post_id) ON DELETE CASCADE,
+                            FOREIGN KEY (post_id) REFERENCES {username}.posts(id) ON DELETE CASCADE,
                             username VARCHAR({self.NAME_MAX_LENGTH}) NOT NULL,
                             FOREIGN KEY (username) REFERENCES perstagram.users_info(username) ON DELETE CASCADE)""")
 
         self.cursor.execute(
             f"""CREATE TABLE IF NOT EXISTS {username}.stories (
-                            story_id INT NOT NULL PRIMARY KEY,
-                            date DATETIME DEFAULT CURRENT_TIMESTAMP,
-                            byte_photo BLOB NOT NULL)""")
+                            id INT NOT NULL PRIMARY KEY,
+                            date DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                            byte_photo MEDIUMBLOB NOT NULL)""")
 
         self.cursor.execute(
             f"""CREATE TABLE IF NOT EXISTS {username}.interest_users (
@@ -165,17 +165,24 @@ class SQL:
             return self.cursor.fetchall()
         return "Nothing returned!"
 
-    def upload_post(self, username, image):
+    def upload_image(self, username, image, table):
         """
         upload post and insert it to the db.
         :param username: the username
         :param image: PIL.Image object
+        :param table: posts or stories
         """
         # updating the sql - username schema
-        self.cursor.execute("SELECT post_id FROM %s.posts", (username,))
-        post_id = len(self.cursor.fetchall())
-        self.cursor.execute("INSERT INTO %s.posts (post_id, byte_photo) VALUES (%s, %s)",
-                            (username, post_id, pickle.dumps(image)))
+        self.cursor.execute(f"SELECT max(id) from {username}.{table}")
+
+        post_id = self.cursor.fetchall()[0][0]
+        if post_id:
+            post_id += 1
+        else:  # first post!
+            post_id = 0
+
+        self.cursor.execute(f"INSERT INTO {username}.{table} (id, byte_photo) VALUES (%s, %s)",
+                            (post_id, pickle.dumps(image)))
         self.db.commit()
 
     def reset_db(self):
@@ -195,7 +202,9 @@ class SQL:
         self.db.commit()
 
         self.create_tables()
-    
+
     @staticmethod
     def sha256(string):
         return hashlib.sha224(string.encode()).hexdigest()
+
+# SQL().reset_db()

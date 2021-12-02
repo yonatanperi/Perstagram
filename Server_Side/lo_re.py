@@ -1,4 +1,5 @@
 from db_connection import SQL
+from handle_user import HandleUser
 
 
 class LoRe:
@@ -32,4 +33,4 @@ class LoRe:
             return AdminRoom(self.client, self.server).main_menu()
         """
         print("authenticated!")
-        return
+        return HandleUser(self.client).handle()
