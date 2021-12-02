@@ -1,23 +1,15 @@
-from .gui_form import GUIForm
+from .app_form import AppForm
 from tkinter import *
 from tkinter import filedialog
 from tkinter.ttk import *
 from PIL import Image, ImageTk
 
 
-class UploadPage(GUIForm):
+class UploadPage(AppForm):
     BASE_HEIGHT = 300
 
-    def __init__(self, client, HomePage):
-        super().__init__(client)
-        self.home_page = HomePage
-
-        # Create A Bottom Bar Frame
-        bar_frame = Frame(self.root)
-        bar_frame.pack(side="bottom", fill="x")
-
-        Button(bar_frame, text="Home", command=lambda: self.go_to_page(self.home_page)).grid(row=0, column=0)
-        Button(bar_frame, text="Search", command=lambda: self.go_to_page("SearchPage")).grid(row=0, column=1)
+    def __init__(self, client):
+        super().__init__(client, self)
 
         # Create A Main Frame
         self.main_frame = Frame(self.root)

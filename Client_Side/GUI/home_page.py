@@ -1,24 +1,16 @@
-from .gui_form import GUIForm
-from .upload_page import UploadPage
+from .app_form import AppForm
 from tkinter import *
 from tkinter.ttk import *
 
 
-class HomePage(GUIForm):
+class HomePage(AppForm):
 
     def __init__(self, client):
-        super().__init__(client)
+        super().__init__(client, self)
         self.scroll_frame = self.set_scrollbar()
         Label(self.scroll_frame, text="Welcome to PERSTAGRAM!", font=("Helvetica 18 bold", 25)).pack(pady=15, padx=10,
                                                                                                      fill='x',
                                                                                                      expand=True)
-
-        # Create A Bottom Bar Frame
-        self.bar_frame = Frame(self.root)
-        self.bar_frame.pack()
-
-        Button(self.bar_frame, text="Search", command=lambda: self.go_to_page("SearchPage")).grid(row=0, column=0)
-        Button(self.bar_frame, text="Upload", command=lambda: self.go_to_page(UploadPage, HomePage)).grid(row=0, column=1)
 
         for thing in range(100):
             Button(self.scroll_frame, text=f'Button {thing + 1} Yo!').pack(pady=10, padx=10, fill='x')
