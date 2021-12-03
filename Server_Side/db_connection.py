@@ -52,8 +52,9 @@ class SQL:
             f"""CREATE TABLE IF NOT EXISTS users_profile (
                     username VARCHAR({self.NAME_MAX_LENGTH}) NOT NULL,
                     FOREIGN KEY (username) REFERENCES users_info(username) ON DELETE CASCADE,
+                    profile_photo MEDIUMBLOB,
                     bio VARCHAR({self.BIO_MAX_LENGTH}),
-                    open BOOLEAN,
+                    open BOOLEAN NOT NULL DEFAULT True,
                     last_post_date DATETIME,
                     last_story_date DATETIME)""")
 
@@ -183,6 +184,27 @@ class SQL:
 
         self.cursor.execute(f"INSERT INTO {username}.{table} (id, byte_photo) VALUES (%s, %s)",
                             (post_id, pickle.dumps(image)))
+        self.db.commit()
+
+    def set_profile_photo(self, username, image):
+        """
+        Set the image to profile photo.
+        :param username: the username
+        :param image: PIL.Image object
+        """
+        # updating the sql
+        width, height = image.size
+
+        if width > height:
+            (left, upper, right, lower) = ((width - height) / 2, 0, (width + height) / 2, height)
+        else:
+            (left, upper, right, lower) = (0, (height - width) / 2, width, (height + width) / 2)
+
+        # Here the image "im" is cropped and assigned to new variable im_crop
+        image = image.crop((left, upper, right, lower))
+        image.show()
+        self.cursor.execute("UPDATE users_profile SET profile_photo = %s WHERE username = %s",
+                            pickle.dumps(image), username)
         self.db.commit()
 
     def reset_db(self):
