@@ -135,6 +135,41 @@ class SQL:
 
         return True
 
+    def get_comments(self, username, post_id):
+        """
+        :return tuple of all the comments ((username, comment), ...)
+        """
+        self.cursor.execute(f'SELECT username, comment FROM {username}.comments WHERE post_id = %s', (post_id,))
+        return self.cursor.fetchall()
+
+    def get_likes(self, username, post_id):
+        """
+        :return tuple of all the username of the users who liked the post ((username), ...)
+        """
+        self.cursor.execute(f'SELECT username FROM {username}.likes WHERE post_id = %s', (post_id,))
+        return self.cursor.fetchall()
+
+    def get_photo(self, username, photo_id, table):
+        """
+        :param username: the username
+        :param photo_id: id of the post or story
+        :param table: posts or stories
+
+        :return tuple of all the username of the users who liked the post ((username), ...)
+        """
+        self.cursor.execute(f'SELECT byte_photo FROM {username}.{table} WHERE id = %s', (photo_id,))
+        return pickle.loads(self.cursor.fetchall()[0][0])
+
+    def get_user_photos(self, username, table):
+        """
+        :param username: the username
+        :param table: posts or stories
+
+        :return tuple of all the images ids.
+        """
+        self.cursor.execute(f'SELECT id FROM {username}.{table}')
+        return self.cursor.fetchall()
+
     def login(self, username, password):
         """
         authenticates the user.
@@ -177,10 +212,10 @@ class SQL:
         self.cursor.execute(f"SELECT max(id) from {username}.{table}")
 
         post_id = self.cursor.fetchall()[0][0]
-        if post_id:
-            post_id += 1
-        else:  # first post!
+        if post_id == None:  # first post!
             post_id = 0
+        else:
+            post_id += 1
 
         self.cursor.execute(f"INSERT INTO {username}.{table} (id, byte_photo) VALUES (%s, %s)",
                             (post_id, pickle.dumps(image)))
@@ -202,7 +237,6 @@ class SQL:
 
         # Here the image "im" is cropped and assigned to new variable im_crop
         image = image.crop((left, upper, right, lower))
-        image.show()
         self.cursor.execute("UPDATE users_profile SET profile_photo = %s WHERE username = %s",
                             pickle.dumps(image), username)
         self.db.commit()
