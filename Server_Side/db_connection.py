@@ -160,7 +160,37 @@ class SQL:
         self.cursor.execute(f'SELECT byte_photo FROM {username}.{table} WHERE id = %s', (photo_id,))
         return pickle.loads(self.cursor.fetchall()[0][0])
 
-    def get_user_photos(self, username, table):
+    def get_profile_photo(self, username):
+        """
+        :param username: the username
+        :return PIL image object of the profile photo
+        """
+        self.cursor.execute("SELECT profile_photo FROM users_profile WHERE username = %s", (username,))
+        profile_photo = self.cursor.fetchall()[0][0]
+        if not profile_photo:  # the user has no profile photo
+            # return the default profile photo of the admin: yonatan
+            self.cursor.execute("SELECT profile_photo FROM users_profile WHERE username = %s", ("yonatan",))
+            profile_photo = self.cursor.fetchall()[0][0]
+
+        return pickle.loads(profile_photo)
+
+    def get_bio(self, username):
+        """
+        :param username: the username
+        :return the bio as text
+        """
+        self.cursor.execute("SELECT bio FROM users_profile WHERE username = %s", (username,))
+        return self.cursor.fetchall()[0][0]
+
+    def get_interest_users(self, username):
+        """
+        :param username: the username
+        :return tuple: ((username, follows?, following?), ...)
+        """
+        self.cursor.execute(f"SELECT * FROM {username}.interest_users")
+        return self.cursor.fetchall()
+
+    def get_user_photos_id(self, username, table):
         """
         :param username: the username
         :param table: posts or stories
@@ -183,11 +213,18 @@ class SQL:
             return True
         return False
 
+    def get_all_usernames(self):
+        """
+        :return: all the usernames in the db
+        """
+        self.cursor.execute("SELECT username FROM users_info")
+        return self.cursor.fetchall()
+
     def get_user_type(self, username):
         self.cursor.execute('SELECT user_type FROM users_authentication WHERE username = %s', (username,))
         return self.cursor.fetchall()[0][0]
 
-    def execute_query(self, query, commit=False, get_results=False):
+    '''def execute_query(self, query, commit=False, get_results=False):
         """
         execute query in the sql database
         :param query: the string query
@@ -199,7 +236,7 @@ class SQL:
             self.db.commit()
         if get_results:
             return self.cursor.fetchall()
-        return "Nothing returned!"
+        return "Nothing returned!"'''
 
     def upload_image(self, username, image, table):
         """
@@ -237,8 +274,9 @@ class SQL:
 
         # Here the image "im" is cropped and assigned to new variable im_crop
         image = image.crop((left, upper, right, lower))
+        image = image.resize((100, 100))
         self.cursor.execute("UPDATE users_profile SET profile_photo = %s WHERE username = %s",
-                            pickle.dumps(image), username)
+                            (pickle.dumps(image), username))
         self.db.commit()
 
     def reset_db(self):
