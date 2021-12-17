@@ -1,13 +1,17 @@
 from typing import List
-from db_connection import SQL
-import pickle
 
 
-class Node:
+class _Node:
     def __init__(self, data: chr, end_point: bool):
-        self.data = data
-        self.next: List[Node] = []
-        self.end_point = end_point
+        """
+        A non-binary tree.
+        Every node has list of nexts.
+        :param data: the char value the node holds
+        :param end_point: whether the node is an end of a letters' path (username is our case)
+        """
+        self.data: chr = data
+        self.next: List[_Node] = []
+        self.end_point: bool = end_point
 
     def __str__(self):
         return self.data
@@ -16,22 +20,33 @@ class Node:
 
 
 class Search:
-    def __init__(self, usernames):
-        self.sql = SQL()
-        self.head_node = Node(None, False)
+    def __init__(self, usernames: List[str]):
+        """
+        Create a search tree and initializing it with the usernames list
+        :param usernames: the complete search path's.
+        """
+        self.head_node = _Node(None, False)
         self._set_search_tree(usernames)
-        # self.set_search_tree(self.sql.get_all_usernames()) TODO
 
     def get_results(self, username_path: str, buffer: int) -> List[str]:
         """
+        Search for the username path in the tree.
         NOT case sensitive!
-        :param username_path:
-        :param buffer:
-        :return:
+        :param username_path: the current search path.
+        :param buffer: a buffer to the size of the returned list.
+        :return: a list of all the matches of the username path.
         """
         return self._get_results_by_node(username_path.lower(), 0, buffer, self.head_node)
 
-    def _get_results_by_node(self, username_path: str, from_index: int, buffer: int, node: Node) -> List[str]:
+    def _get_results_by_node(self, username_path: str, from_index: int, buffer: int, node: _Node) -> List[str]:
+        """
+        Matches the username path is the tree and then calls self._get_results_by_buffer
+        :param username_path: the current search path.
+        :param from_index: of the username path
+        :param buffer: a buffer to the size of the returned list.
+        :param node: current node (for the recursion)
+        :return: a list of all the matches of the username path.
+        """
         if not node.next:
             return []
 
@@ -41,13 +56,14 @@ class Search:
                     return self._get_results_by_node(username_path, from_index + 1, buffer, current_node)
         return self._get_results_by_buffer(node, buffer, username_path[:-1], [])
 
-    def _get_results_by_buffer(self, node: Node, buffer: int, username_path: str, usernames: List[str]) -> List[str]:
+    def _get_results_by_buffer(self, node: _Node, buffer: int, username_path: str, usernames: List[str]) -> List[str]:
         """
-        TODO
-        :param node:
-        :param buffer:
-        :param username_path:
-        :param usernames:
+        After the matching of the username path in tree, this func fetch the rest of the path's.
+        :param node: current node (for the recursion)
+        :param buffer: a buffer to the size of the returned list.
+        :param username_path: the current search path.
+        :param usernames: the returned list. Starts empty!
+        :return: a list of all the matches of the username path.
         """
         # root to left to right
 
@@ -72,12 +88,25 @@ class Search:
         return usernames
 
     def _set_search_tree(self, usernames: List[str]):
+        """
+        map the self._insert_to_tree func with all the usernames.
+        :param usernames: the usernames.
+        """
         list(map(self._insert_to_tree, usernames))
 
     def _insert_to_tree(self, username: str):
+        """
+        Calls self._insert_by_node with the head node.
+        :param username: the usernames.
+        """
         self._insert_by_node(username.lower(), self.head_node)
 
-    def _insert_by_node(self, username, node):
+    def _insert_by_node(self, username: str, node: _Node):
+        """
+        Matches the username string path with the current tree and pushes the remainder path.
+        :param username: the string path which gets inserted.
+        :param node: current node.
+        """
         if node.next and username:
             for current_node in node.next:
                 if username[0] == current_node.data:
@@ -85,21 +114,14 @@ class Search:
 
         self._push_to_node(username, node)
 
-    def _push_to_node(self, username, node):
+    def _push_to_node(self, username: str, node: _Node):
+        """
+        Like linked-list
+        :param username: the string path which gets inserted.
+        :param node: current node.
+        """
         # just directly
         if username:
-            new_node = Node(username[0], True if len(username) == 1 else False)
+            new_node = _Node(username[0], True if len(username) == 1 else False)
             node.next.append(new_node)
             self._push_to_node(username[1:], new_node)
-
-
-def main():
-    with open("names_list", "rb") as f:
-        l = pickle.loads(f.read())
-
-    s = Search(l)
-    print(s.get_results("J", 15))
-
-
-if __name__ == '__main__':
-    main()
