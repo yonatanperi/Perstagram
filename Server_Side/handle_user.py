@@ -1,5 +1,4 @@
 from db_connection import SQL
-from search import Search
 
 
 class HandleUser:
@@ -8,9 +7,12 @@ class HandleUser:
     This listener will handle them!
     """
 
-    def __init__(self, client):
+    DEFAULT_SEARCH_BUFFER = 10
+
+    def __init__(self, client, search_object):
         self.client = client
         self.sql = SQL()
+        self.search_object = search_object
 
     def handle(self):
         recved = self.client.recv_message()  # structure: ["request", *args]
@@ -53,5 +55,14 @@ class HandleUser:
         elif recved[0] == "get all posts":
             # send all posts ids
             self.client.send_message(self.sql.get_user_photos_id(recved[1], "posts"))
+
+        elif recved[0] == "search":
+            # search and send back the results
+            if recved[1]:
+                self.client.send_message(
+                    self.search_object.get_results(recved[1], self.DEFAULT_SEARCH_BUFFER)
+                )
+            else:
+                self.client.send_message([])
 
         self.handle()

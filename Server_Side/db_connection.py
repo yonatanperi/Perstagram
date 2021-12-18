@@ -17,7 +17,7 @@ class SQL:
             host="localhost",
             user="root",
             password="7324545",
-            database="perstagram"  # assuming the data base already exists
+            database="perstagram"  # assuming the database already exists
         )
 
         self.cursor = self.db.cursor()
@@ -62,12 +62,13 @@ class SQL:
         self.register_admin()
 
     def register_admin(self):
-        self.register("yonatan", "7324545", "yonatan", "peri", "yonatanperi333@gmail.com", "admin")
+        self.register("yonatan", "7324545", "yonatan", "peri", "yonatanperi333@gmail.com", user_type="admin")
 
-    def register(self, username, password, first_name, last_name, email, user_type="client"):
+    def register(self, username, password, first_name, last_name, email, search_object=None, user_type="client"):
         """
         register a user into the database.
         updates the default schema and creates a special schema for the user.
+        insert the username in the search_object
         :return:
                 True - the registration proses was successful
                 False - the registration proses wasn't successful - something went wrong.
@@ -132,6 +133,10 @@ class SQL:
                                     following BOOLEAN)""")
 
         self.db.commit()
+
+        # insert to search object
+        if search_object:
+            search_object.insert_to_tree(username)
 
         return True
 

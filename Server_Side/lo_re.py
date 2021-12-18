@@ -10,13 +10,16 @@ class LoRe:
         self.sql = SQL()
 
     def authenticate_client(self):
+        # TODO doc!!!!!!
 
         authentication = self.client.recv_message()  # [username, password, *args]
         lo_re = self.sql.login
+        args = []
         if len(authentication) > 2:
             lo_re = self.sql.register
+            args.append(self.server.search_object)
 
-        if not lo_re(*authentication):
+        if not lo_re(*(list(authentication) + args)):
             self.client.send_message(False)
             return self.authenticate_client()
 
@@ -32,5 +35,4 @@ class LoRe:
         if self.sql.get_user_type(self.client.username) == "admin":
             return AdminRoom(self.client, self.server).main_menu()
         """
-        print("authenticated!")
-        return HandleUser(self.client).handle()
+        return HandleUser(self.client, self.server.search_object).handle()

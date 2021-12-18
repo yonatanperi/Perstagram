@@ -34,6 +34,9 @@ class AppForm(GUIForm):
                 elif current_page_name == "Upload":
                     from .upload_page import UploadPage
                     current_button.configure(command=lambda: self.go_to_page(UploadPage))
+                elif current_page_name == "Search":
+                    from .search_page import SearchPage
+                    current_button.configure(command=lambda: self.go_to_page(SearchPage))
 
             current_button.grid(row=0, column=column_index)
 

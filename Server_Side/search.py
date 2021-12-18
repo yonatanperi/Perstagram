@@ -26,7 +26,7 @@ class Search:
         :param usernames: the complete search path's.
         """
         self.head_node = _Node(None, False)
-        self._set_search_tree(usernames)
+        list(map(self.insert_to_tree, usernames))  # set the search tree
 
     def get_results(self, username_path: str, buffer: int) -> List[str]:
         """
@@ -36,25 +36,27 @@ class Search:
         :param buffer: a buffer to the size of the returned list.
         :return: a list of all the matches of the username path.
         """
-        return self._get_results_by_node(username_path.lower(), 0, buffer, self.head_node)
+        return self._get_results_by_node(username_path.lower(), "", buffer, self.head_node)
 
-    def _get_results_by_node(self, username_path: str, from_index: int, buffer: int, node: _Node) -> List[str]:
+    def _get_results_by_node(self, username_path: str, current_path: str, buffer: int, node: _Node) -> List[str]:
         """
         Matches the username path is the tree and then calls self._get_results_by_buffer
         :param username_path: the current search path.
-        :param from_index: of the username path
+        :param current_path: on tree, starts empty.
         :param buffer: a buffer to the size of the returned list.
         :param node: current node (for the recursion)
         :return: a list of all the matches of the username path.
         """
-        if not node.next:
+        if len(current_path) < len(username_path):
+            for current_node in node.next:
+                if username_path[len(current_path)] == current_node.data:
+                    return self._get_results_by_node(username_path,
+                                                     current_path + username_path[len(current_path)],
+                                                     buffer,
+                                                     current_node)
             return []
 
-        if from_index < len(username_path):
-            for current_node in node.next:
-                if username_path[from_index] == current_node.data:
-                    return self._get_results_by_node(username_path, from_index + 1, buffer, current_node)
-        return self._get_results_by_buffer(node, buffer, username_path[:-1], [])
+        return self._get_results_by_buffer(node, buffer, current_path[:-1], [])
 
     def _get_results_by_buffer(self, node: _Node, buffer: int, username_path: str, usernames: List[str]) -> List[str]:
         """
@@ -87,14 +89,7 @@ class Search:
 
         return usernames
 
-    def _set_search_tree(self, usernames: List[str]):
-        """
-        map the self._insert_to_tree func with all the usernames.
-        :param usernames: the usernames.
-        """
-        list(map(self._insert_to_tree, usernames))
-
-    def _insert_to_tree(self, username: str):
+    def insert_to_tree(self, username: str):
         """
         Calls self._insert_by_node with the head node.
         :param username: the usernames.
