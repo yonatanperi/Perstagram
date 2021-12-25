@@ -20,7 +20,7 @@ class Server:
     def start(self, ip, port):
 
         # set search object
-        self.search_object = Search(list(map(lambda t: t[0], SQL().get_all_usernames())))
+        self.search_object = Search(SQL.ugly_list_2_list(SQL().get_all_usernames()))
 
         # starts listening to income clients
         self.server_socket.bind((ip, port))

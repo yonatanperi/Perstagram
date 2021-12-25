@@ -1,3 +1,4 @@
+from datetime import datetime
 from db_connection import SQL
 
 
@@ -18,7 +19,16 @@ class HandleUser:
         recved = self.client.recv_message()  # structure: ["request", *args]
 
         if recved[0] == "post":
-            self.sql.upload_image(self.client.username, recved[1], "posts")
+
+            post_date = datetime.now()
+
+            # update the user's sql
+            post_id = self.sql.upload_image(self.client.username, recved[1], "posts")
+
+            # update all the others
+            followers = self.sql.get_followers(self.client.username)
+            for followed_user in followers:
+                self.sql.update_latest_posts_stack(self.client.username, followed_user, post_id, post_date)
 
         elif recved[0] == "post2story":
             self.sql.upload_image(self.client.username, recved[1], "stories")
@@ -47,9 +57,9 @@ class HandleUser:
 
         elif recved[0] == "get post":
             # send a dict: {image:, comments:, likes:}
-            image = self.sql.get_photo(recved[1], recved[2], "posts")
-            comments = self.sql.get_comments(recved[1], recved[2])
-            likes = self.sql.get_likes(recved[1], recved[2])
+            image = self.sql.get_photo(recved[1], recved[2], "posts", self.client.username)
+            comments = self.sql.get_comments(recved[1], recved[2], self.client.username)
+            likes = self.sql.get_likes(recved[1], recved[2], self.client.username)
             self.client.send_message({"image": image, "comments": comments, "likes": likes})
 
         elif recved[0] == "get all posts":
@@ -64,5 +74,25 @@ class HandleUser:
                 )
             else:
                 self.client.send_message([])
+
+        elif recved[0] == "seen post":  # , username, post_id
+            self.sql.remove_from_latest_posts_stack(recved[1], recved[2])
+
+        elif recved[0] == "get home page posts":  # , buffer
+            # delete old posts from stack
+            self.sql.delete_old_post_from_stack(self.client.username)
+
+            # send posts ids
+            self.client.send_message(self.sql.get_posts_from_stack(self.client.username, recved[1]))
+
+        elif recved[0] == "get next post":
+            # send post ids
+            self.client.send_message(self.sql.next_post_from_stack(self.client.username))
+
+        elif recved[0] == "follow":
+            self.sql.follow(self.client.username, recved[1])
+
+        elif recved[0] == "unfollow":
+            self.sql.unfollow(self.client.username, recved[1])
 
         self.handle()

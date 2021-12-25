@@ -1,3 +1,5 @@
+import time
+
 from .app_form import AppForm
 from .post_object import Post
 from tkinter import *
@@ -61,9 +63,6 @@ class ProfilePage(AppForm):
         pass
 
     def follow(self):
-        if self.e_f_button["text"] == "follow":
-            # TODO
-            pass
-        else:
-            # TODO
-            pass
+        self.client.send_message((self.e_f_button["text"], self.username))
+        time.sleep(1)  # for the server to update the sql
+        self.go_to_page(ProfilePage)

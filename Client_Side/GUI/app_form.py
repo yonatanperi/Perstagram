@@ -44,6 +44,11 @@ class AppForm(GUIForm):
 
     def on_mousewheel(self, event):
         self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        print(self.scrollbar.get())
+
+    def scroll_canvas(self, *args):
+        self.canvas.yview(*args)
+        print(self.scrollbar.get())
 
     def get_scrollbar_frame(self):
         # Create A Main Frame
@@ -57,7 +62,7 @@ class AppForm(GUIForm):
         self.canvas.bind_all("<MouseWheel>", self.on_mousewheel)
 
         # Add A Scrollbar To The Canvas
-        self.scrollbar = Scrollbar(main_frame, orient=VERTICAL, command=self.canvas.yview)
+        self.scrollbar = Scrollbar(main_frame, orient=VERTICAL, command=self.scroll_canvas)
         self.scrollbar.pack(side=RIGHT, fill=Y)
 
         # Configure The Canvas

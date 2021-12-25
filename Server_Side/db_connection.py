@@ -1,3 +1,6 @@
+import datetime
+from typing import List
+
 import mysql.connector
 import pickle
 import hashlib
@@ -8,6 +11,7 @@ class SQL:
     EMAIL_MAX_LENGTH = 100
     BIO_MAX_LENGTH = 500
     SHA256_LENGTH = 64
+    POST_MAX_DATE_IN_STACK = datetime.timedelta(weeks=2)
 
     def __init__(self):
         """
@@ -54,9 +58,7 @@ class SQL:
                     FOREIGN KEY (username) REFERENCES users_info(username) ON DELETE CASCADE,
                     profile_photo MEDIUMBLOB,
                     bio VARCHAR({self.BIO_MAX_LENGTH}),
-                    open BOOLEAN NOT NULL DEFAULT True,
-                    last_post_date DATETIME,
-                    last_story_date DATETIME)""")
+                    open BOOLEAN NOT NULL DEFAULT True)""")
 
         self.db.commit()
         self.register_admin()
@@ -64,7 +66,8 @@ class SQL:
     def register_admin(self):
         self.register("yonatan", "7324545", "yonatan", "peri", "yonatanperi333@gmail.com", user_type="admin")
 
-    def register(self, username, password, first_name, last_name, email, search_object=None, user_type="client"):
+    def register(self, username, password, first_name, last_name, email, open_user=True, search_object=None,
+                 user_type="client"):
         """
         register a user into the database.
         updates the default schema and creates a special schema for the user.
@@ -91,8 +94,8 @@ class SQL:
                             (username, first_name, last_name, email))
         self.cursor.execute("INSERT INTO users_authentication (username, password, user_type) VALUES (%s, %s, %s)",
                             (username, password, user_type))
-        self.cursor.execute("INSERT INTO users_profile (username) VALUES (%s)",
-                            (username,))
+        self.cursor.execute("INSERT INTO users_profile (username, open) VALUES (%s, %s)",
+                            (username, open_user))
 
         # create new schema for the new user
 
@@ -131,6 +134,20 @@ class SQL:
                                     FOREIGN KEY (username) REFERENCES perstagram.users_info(username) ON DELETE CASCADE,
                                     follows BOOLEAN,
                                     following BOOLEAN)""")
+        # followers - people follows me
+        # following - people I follow
+
+        self.cursor.execute(
+            f"""CREATE TABLE IF NOT EXISTS {username}.latest_posts_stack (
+                                                username VARCHAR({self.NAME_MAX_LENGTH}) NOT NULL,
+                                                FOREIGN KEY (username) REFERENCES perstagram.users_info(username) ON DELETE CASCADE,
+                                                post_id INT NOT NULL,
+                                                date DATETIME NOT NULL)""")
+        if not open_user:
+            self.cursor.execute(
+                f"""CREATE TABLE IF NOT EXISTS {username}.follow_requests (
+                                                            username VARCHAR({self.NAME_MAX_LENGTH}) NOT NULL,
+                                                            FOREIGN KEY (username) REFERENCES perstagram.users_info(username) ON DELETE CASCADE""")
 
         self.db.commit()
 
@@ -140,30 +157,112 @@ class SQL:
 
         return True
 
-    def get_comments(self, username, post_id):
+    def is_open_user(self, username: str) -> bool:
+        """
+        Check if the user is open or closed
+        :param username:
+        :return: boolean...
+        """
+        self.cursor.execute(f'select open from users_profile where username = %s',
+                            (username,))
+        return self.cursor.fetchall()[0][0] == 1
+
+    def get_posts_from_stack(self, username, buffer):
+        """
+        When the homepage is starting, it presents the buffer amount of posts
+        :param username: who uses
+        :param buffer: of posts
+        :return: the username and post id of each post
+        """
+        self.cursor.execute(f'SELECT username, post_id FROM {username}.latest_posts_stack ORDER BY date DESC LIMIT %s',
+                            (buffer,))
+        return self.cursor.fetchall()
+
+    def delete_old_post_from_stack(self, username):
+        """
+        When the user don't open the app long time, the very old post gets deleted from the stack
+        :param username: the user who didn't open the app long time
+        """
+
+        self.cursor.execute(
+            f'DELETE FROM {username}.latest_posts_stack WHERE date < "{(datetime.datetime.now() - self.POST_MAX_DATE_IN_STACK).strftime("%Y-%m-%d")}"')
+
+    def next_post_from_stack(self, username):
+        """
+        When the homepage is running, it loads posts.
+        :param username: who uses
+        :return: the username and post id of each post
+        """
+        self.cursor.execute(f'SELECT username, post_id FROM {username}.latest_posts_stack ORDER BY date DESC LIMIT 1')
+        return self.cursor.fetchall()[0][0]
+
+    def remove_from_latest_posts_stack(self, username, post_id):
+        """
+        When the user seen post, it gets deleted from the posts stack.
+        :param username: who have seen the post
+        :param post_id:
+        """
+        self.cursor.execute(
+            f"REMOVE FROM {username}.latest_posts_stack WHERE username = %s AND post_id = %s",
+            (username, post_id))
+
+        self.db.commit()
+
+    def update_latest_posts_stack(self, username_to_update, username_who_posted, post_id, post_date):
+        self.cursor.execute(
+            f"INSERT INTO {username_to_update}.latest_posts_stack (username, post_id, date) VALUES (%s, %s, %s)",
+            (username_who_posted, post_id, post_date))
+
+        self.db.commit()
+
+    def get_followers(self, username):
+        self.cursor.execute(f'SELECT username FROM {username}.interest_users WHERE follows = 1')
+        return self.ugly_list_2_list(self.cursor.fetchall())
+
+    def get_comments(self, username, post_id, client_username):
         """
         :return tuple of all the comments ((username, comment), ...)
         """
-        self.cursor.execute(f'SELECT username, comment FROM {username}.comments WHERE post_id = %s', (post_id,))
-        return self.cursor.fetchall()
+        if self.is_open_user(username) and client_username not in self.get_followers(username):
+            self.cursor.execute(f'SELECT username, comment FROM {username}.comments WHERE post_id = %s', (post_id,))
+            return self.cursor.fetchall()
+        else:
+            return "closed!"
 
-    def get_likes(self, username, post_id):
+    def get_likes(self, username, post_id, client_username):
         """
         :return tuple of all the username of the users who liked the post ((username), ...)
         """
-        self.cursor.execute(f'SELECT username FROM {username}.likes WHERE post_id = %s', (post_id,))
-        return self.cursor.fetchall()
+        if self.is_open_user(username) and client_username not in self.get_followers(username):
+            self.cursor.execute(f'SELECT username FROM {username}.likes WHERE post_id = %s', (post_id,))
+            return self.cursor.fetchall()
+        else:
+            return "closed!"
 
-    def get_photo(self, username, photo_id, table):
+    def get_date(self, username, post_id, client_username):
+        """
+        :return tuple of all the username of the users who liked the post ((username), ...)
+        """
+        if self.is_open_user(username) and client_username not in self.get_followers(username):
+            self.cursor.execute(f'SELECT username FROM {username}.date WHERE post_id = %s', (post_id,))
+            return self.cursor.fetchall()
+        else:
+            return "closed!"
+
+    def get_photo(self, username, photo_id, table, client_username):
         """
         :param username: the username
         :param photo_id: id of the post or story
         :param table: posts or stories
+        :param client_username: the client's username
 
         :return tuple of all the username of the users who liked the post ((username), ...)
         """
-        self.cursor.execute(f'SELECT byte_photo FROM {username}.{table} WHERE id = %s', (photo_id,))
-        return pickle.loads(self.cursor.fetchall()[0][0])
+        if self.is_open_user(username) or client_username not in self.get_followers(username):
+            self.cursor.execute(f'SELECT byte_photo FROM {username}.{table} WHERE id = %s', (photo_id,))
+            return pickle.loads(self.cursor.fetchall()[0][0])
+        else:
+            return "closed!"
 
     def get_profile_photo(self, username):
         """
@@ -186,6 +285,63 @@ class SQL:
         """
         self.cursor.execute("SELECT bio FROM users_profile WHERE username = %s", (username,))
         return self.cursor.fetchall()[0][0]
+
+    def follow(self, follower: str, followed: str, check_for_open: bool = True):
+        """
+        insert the interest users and the stack on both users
+        :param check_for_open: whether to check if the followed user is open
+        :param follower: the one who ask to follow
+        :param followed: the one who asked to be followed
+        """
+        # check if open
+        if self.is_open_user(followed) or not check_for_open:
+            # interest users
+            fs_str = ("follows", "following")
+            fs = (follower, followed)
+            for i in range(2):
+                self.cursor.execute(f"SELECT * FROM {fs[i]}.interest_users WHERE username = %s", (fs[1 - i],))
+                if self.cursor.fetchall():  # it exists
+                    self.cursor.execute(f"UPDATE {fs[i]}.interest_users SET {fs_str[i]} = TRUE")
+                else:
+                    self.cursor.execute(
+                        f"INSERT INTO {fs[i]}.interest_users (username, follows, following) VALUES (%s, %s, %s)",
+                        (fs[1 - i], i, 1 - i))
+
+            # latest_posts_stack
+            self.cursor.execute(
+                f'SELECT id, date FROM {followed}.posts WHERE date > "{(datetime.datetime.now() - self.POST_MAX_DATE_IN_STACK).strftime("%Y-%m-%d")}"')
+            posts_details = self.cursor.fetchall()
+
+            for post_details in posts_details:
+                self.cursor.execute(
+                    f"INSERT INTO {follower}.latest_posts_stack (username, post_id, date) VALUES (%s, %s, %s)",
+                    (followed, post_details[0], post_details[1]))
+
+            self.db.commit()
+        else:
+            # add to requests
+            self.cursor.execute(
+                f"INSERT INTO {followed}.follow_requests (username) VALUES (%s)",
+                (follower,))
+            self.db.commit()
+
+    def unfollow(self, follower: str, followed: str):
+        """
+        deletes from interest users and the stack on both users
+        :param follower: the one who ask to unfollow
+        :param followed: the one who is unfollowed
+        """
+        # interest users
+        fs_str = ("follows", "following")
+        fs = (follower, followed)
+        for i in range(2):
+            self.cursor.execute(f"UPDATE {fs[i]}.interest_users SET {fs_str[i]} = FALSE")
+
+        # latest_posts_stack
+        self.cursor.execute(
+            f"DELETE FROM {follower}.latest_posts_stack WHERE username = %s", (followed,))
+
+        self.db.commit()
 
     def get_interest_users(self, username):
         """
@@ -249,6 +405,8 @@ class SQL:
         :param username: the username
         :param image: PIL.Image object
         :param table: posts or stories
+
+        :return: the post id
         """
         # updating the sql - username schema
         self.cursor.execute(f"SELECT max(id) from {username}.{table}")
@@ -262,6 +420,8 @@ class SQL:
         self.cursor.execute(f"INSERT INTO {username}.{table} (id, byte_photo) VALUES (%s, %s)",
                             (post_id, pickle.dumps(image)))
         self.db.commit()
+
+        return post_id
 
     def set_profile_photo(self, username, image):
         """
@@ -296,7 +456,9 @@ class SQL:
 
         self.cursor.execute("SHOW TABLES")
         for table in self.cursor.fetchall():
-            self.cursor.execute(f"DELETE FROM {table[0]}")
+            if table[0] != "users_info":
+                self.cursor.execute(f"DROP TABLE {table[0]}")
+        self.cursor.execute(f"DROP TABLE users_info")
 
         self.db.commit()
 
@@ -305,5 +467,10 @@ class SQL:
     @staticmethod
     def sha256(string):
         return hashlib.sha224(string.encode()).hexdigest()
+
+    @staticmethod
+    def ugly_list_2_list(ugly_list: List[tuple]):
+        # [(a), (b), ...] -> [a, b, ...]
+        return list(map(lambda t: t[0], ugly_list))
 
 # SQL().reset_db()

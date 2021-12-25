@@ -38,7 +38,8 @@ class LoRe(GUIForm):
                                                                     self.password.get(),
                                                                     self.first_name.get(),
                                                                     self.last_name.get(),
-                                                                    self.email.get()))
+                                                                    self.email.get(),
+                                                                    self.open_user.get()))
         self.register_button.grid(row=3, column=2)
 
         # error label
@@ -61,6 +62,9 @@ class LoRe(GUIForm):
 
         Label(self.root, text="Email").grid(row=1, column=0),
         Entry(self.root, textvariable=self.email).grid(row=1, column=1)
+
+        self.open_user = BooleanVar()
+        Checkbutton(self.root, text='Open', variable=self.open_user, onvalue=True, offvalue=False).grid(row=2, column=0)
 
         # move register button
         self.or_instead.grid_forget()

@@ -18,18 +18,19 @@ class Client:
     def recv_message(self):
         try:
             full_msg = b''
-            new_msg = True
-            msg_len = 0
-            while len(full_msg) - Client.HEADER_SIZE != msg_len:
-                msg = self.client_socket.recv(Client.BUFFER_SIZE)
-                if new_msg:
-                    msg_len = int(msg[:Client.HEADER_SIZE])
-                    new_msg = False
+            msg_len = int(self.client_socket.recv(Client.HEADER_SIZE)[:Client.HEADER_SIZE])
+            if msg_len == 0:
+                return
+            buffer = Client.BUFFER_SIZE
 
+            while len(full_msg) != msg_len:
+                if msg_len - len(full_msg) < Client.BUFFER_SIZE:
+                    buffer = msg_len - len(full_msg)
+                msg = self.client_socket.recv(buffer)
                 full_msg += msg
 
             # full msg recvd
-            dec_message = pickle.loads(self.fernet.decrypt(full_msg[Client.HEADER_SIZE:]))
+            dec_message = pickle.loads(self.fernet.decrypt(full_msg))
             print("recved: " + str(dec_message))
             return dec_message
         except ConnectionResetError:  # loged out
