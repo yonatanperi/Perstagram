@@ -11,9 +11,9 @@ class HomePage(AppForm):
         super().__init__(client, self)
 
         self.seen_all_posts: bool = False
+        self.top_bar_hight_ratio = 0.25  # the top part relative to one post
         self.scroll_frame = self.get_scrollbar_frame()
-        self.bottom_scroll_bar_percentage = 0  # Will be defined later
-        self.current_post_index = 1
+        self.current_post_index = 0
         self.posts = []
 
         Label(self.scroll_frame, text="perstagram", font=("Billabong", 40)).pack(pady=15, padx=10)
@@ -25,32 +25,30 @@ class HomePage(AppForm):
                 self.posts.append(post)
                 self.pack_post(*post)
 
-        # set self.bottom_scroll_bar_percentage
-        self.root.after(1000, self.set_bottom_scroll_bar_percentage)
-
-    def set_bottom_scroll_bar_percentage(self):
-        """
-        The self.scrollbar.get()[1] is the location of the bottom part of the scrollbar.
-        This function sets to self.bottom_scroll_bar_percentage its initial location.
-        """
-        location = self.scrollbar.get()
-        self.bottom_scroll_bar_percentage = location[1] - location[0]
-
     def analyze_location(self):
         """
         Check when the user viewed a frame.
         """
+        # Now percentage_location will be set
+        # The binomial for this problem is: (x + y - l) / (2 - 2 * l)
+        # When x is the top of the scroll bar, y is the bottom and l is the length of it.
 
-        if self.bottom_scroll_bar_percentage == 1:  # no scroll regen
+        # because l = y - x,
+        # The binomial is: x / (1 - y + x)
+
+        x, y = self.scrollbar.get()
+        if x == 0 and y == 1:
+            # no scroll region
             percentage_location = 1
         else:
-            percentage_location = self.scrollbar.get()[1] / (1 - self.bottom_scroll_bar_percentage)
+            percentage_location = x / (1 - y + x)
+        print(f"{percentage_location}, {(self.top_bar_hight_ratio + self.current_post_index + 1) / (self.top_bar_hight_ratio + len(self.posts))}")
 
-        if percentage_location >= self.current_post_index / len(self.posts) and self.current_post_index <= len(
-                self.posts):
+        if percentage_location >= (self.top_bar_hight_ratio + self.current_post_index + 1) / (
+                self.top_bar_hight_ratio + len(self.posts)) and self.current_post_index < len(self.posts):
+            # don't even ask about the condition line
             # passed post
-            print("passed post!")
-            self.client.send_message(("seen post", *self.posts[self.current_post_index - 1]))
+            self.client.send_message(("seen post", *self.posts[self.current_post_index]))
 
             if self.seen_all_posts:
                 self.current_post_index += 1  # this is the only thing
