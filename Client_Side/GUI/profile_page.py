@@ -19,6 +19,7 @@ class ProfilePage(AppForm):
             self.default_user = False
 
         self.scroll_frame = self.get_scrollbar_frame()
+
         # About bar
         about_frame = Frame(self.scroll_frame)
         about_frame.pack(pady=10)
@@ -34,6 +35,9 @@ class ProfilePage(AppForm):
         Label(about_frame, text=f"{len(self.interest_users['follows'])}\nFollows").grid(row=0, column=2, padx=10)
         Label(about_frame, text=f"{len(self.interest_users['following'])}\nFollowing").grid(row=0, column=3, padx=10)
 
+        # username
+        Label(about_frame, text=self.username, font=("Helvetica 14 bold", 14)).grid(row=1, column=0, pady=10)
+
         # edit profile / follow button
         if self.default_user:  # edit profile
             self.e_f_button = Button(about_frame, text="Edit Profile", command=self.edit_profile)
@@ -44,10 +48,10 @@ class ProfilePage(AppForm):
             else:  # follow button
                 button_text = "follow"
             self.e_f_button = Button(about_frame, text=button_text, command=self.follow)
-        self.e_f_button.grid(row=1, column=0, columnspan=4, pady=5, sticky="we")
+        self.e_f_button.grid(row=2, column=0, columnspan=4, pady=5, sticky="we")
 
         # bio
-        Label(about_frame, text=f"bio: {self.client.get_answer(('get bio', self.username))}").grid(row=2, column=0,
+        Label(about_frame, text=f"bio: {self.client.get_answer(('get bio', self.username))}").grid(row=3, column=0,
                                                                                                    padx=10,
                                                                                                    columnspan=4,
                                                                                                    sticky="w")

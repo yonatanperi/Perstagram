@@ -1,0 +1,5 @@
+לפני הרצת התכנה יש לבצע מספר התקנות:
+python 3
+mysql - 'perstagram' schema. reset sql from the py file
+Pillow
+Billabong Font

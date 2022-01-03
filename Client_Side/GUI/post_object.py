@@ -24,7 +24,8 @@ class Post:
         if self.post_data["image"] == "closed!":
             Label(self.post_frame, text=f"This user is closed!", font=("Helvetica 18 bold", 12)).pack(pady=15, padx=10)
         else:
-            Label(self.post_frame, text=f"@{username}", font=("Helvetica 18 bold", 12)).pack(pady=15, padx=10)
+            Label(self.post_frame, text=f"@{username}", font=("Bebas", 12), anchor='w').pack(pady=5, padx=10,
+                                                                                             fill='both')
 
             photo = ImageTk.PhotoImage(self.post_data["image"])
             image_lbl = Label(self.post_frame, image=photo)
@@ -32,4 +33,4 @@ class Post:
             image_lbl.pack(pady=10, padx=10)
 
             Label(self.post_frame, text=f"{len(self.post_data['likes'])} Likes!",
-                  font=("Helvetica 18 bold", 8)).pack(pady=15, padx=10)
+                  font=("Helvetica 18 bold", 10), anchor='w').pack(pady=5, padx=10, fill='both')

@@ -16,6 +16,8 @@ class HomePage(AppForm):
         self.current_post_index = 1
         self.posts = []
 
+        Label(self.scroll_frame, text="perstagram", font=("Billabong", 40)).pack(pady=15, padx=10)
+
         # Pack initial posts
         for i in range(self.POST_NUMBER_LOAD_BUFFER):
             post = self.client.get_answer(("get next post", i + 1))  # username, post_id
@@ -44,7 +46,7 @@ class HomePage(AppForm):
         else:
             percentage_location = self.scrollbar.get()[1] / (1 - self.bottom_scroll_bar_percentage)
 
-        if percentage_location >= self.current_post_index / len(self.posts) and self.current_post_index < len(
+        if percentage_location >= self.current_post_index / len(self.posts) and self.current_post_index <= len(
                 self.posts):
             # passed post
             print("passed post!")
@@ -61,7 +63,7 @@ class HomePage(AppForm):
                     self.pack_post(*next_post)
                 else:  # this happens ones
                     self.seen_all_posts = True
-                    Label(self.scroll_frame, text="You're all caught up!", font=("Helvetica 14 bold", 25)).pack(
+                    Label(self.scroll_frame, text="You're all caught up!", font=("Helvetica 14 bold", 18)).pack(
                         pady=15, padx=10,
                         fill='x',
                         expand=True)
