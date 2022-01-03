@@ -1,9 +1,10 @@
+from abc import abstractmethod
+
 from .gui_form import GUIForm
 from tkinter import *
 
 
 class AppForm(GUIForm):
-
     PAGES = ["Home", "Profile", "Search", "Upload"]
 
     def __init__(self, client, page_class):
@@ -44,13 +45,25 @@ class AppForm(GUIForm):
 
     def on_mousewheel(self, event):
         self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
-        print(self.scrollbar.get())
+        self.analyze_location()
 
     def scroll_canvas(self, *args):
         self.canvas.yview(*args)
-        print(self.scrollbar.get())
+        self.analyze_location()
+
+    def reset_scrollregion(self, event):
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+
+    def analyze_location(self):
+        """
+        Check when the user viewed a frame.
+        """
+        pass
 
     def get_scrollbar_frame(self):
+
+        self.passed_post = False  # Will change
+
         # Create A Main Frame
         main_frame = Frame(self.root)
         main_frame.pack(fill=BOTH, expand=1)
@@ -71,6 +84,7 @@ class AppForm(GUIForm):
 
         # Create ANOTHER Frame INSIDE the Canvas
         scroll_frame = Frame(self.canvas)
+        scroll_frame.bind("<Configure>", self.reset_scrollregion)
 
         # Add that New frame To a Window In The Canvas
         self.canvas.create_window((0, 0), window=scroll_frame, anchor="nw")

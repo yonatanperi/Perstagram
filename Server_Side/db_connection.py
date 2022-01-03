@@ -187,23 +187,29 @@ class SQL:
         self.cursor.execute(
             f'DELETE FROM {username}.latest_posts_stack WHERE date < "{(datetime.datetime.now() - self.POST_MAX_DATE_IN_STACK).strftime("%Y-%m-%d")}"')
 
-    def next_post_from_stack(self, username):
+    def next_post_from_stack(self, username, posts_buffer):
         """
         When the homepage is running, it loads posts.
         :param username: who uses
+        :param posts_buffer: the loaded posts number buffer
+
         :return: the username and post id of each post
         """
-        self.cursor.execute(f'SELECT username, post_id FROM {username}.latest_posts_stack ORDER BY date DESC LIMIT 1')
-        return self.cursor.fetchall()[0][0]
+        self.cursor.execute(f'SELECT username, post_id FROM {username}.latest_posts_stack ORDER BY date DESC')
+        post = self.cursor.fetchall()
+        if len(post) >= posts_buffer:
+            return post[posts_buffer - 1]  # indexing starts from 0
+        return
 
-    def remove_from_latest_posts_stack(self, username, post_id):
+    def remove_from_latest_posts_stack(self, client_username, username, post_id):
         """
         When the user seen post, it gets deleted from the posts stack.
-        :param username: who have seen the post
-        :param post_id:
+        :param client_username: who have seen the post
+        :param username: who uploaded the post
+        :param post_id: the post id
         """
         self.cursor.execute(
-            f"REMOVE FROM {username}.latest_posts_stack WHERE username = %s AND post_id = %s",
+            f"DELETE FROM {client_username}.latest_posts_stack WHERE username = %s AND post_id = CAST(%s AS UNSIGNED)",
             (username, post_id))
 
         self.db.commit()
@@ -223,7 +229,7 @@ class SQL:
         """
         :return tuple of all the comments ((username, comment), ...)
         """
-        if self.is_open_user(username) and client_username not in self.get_followers(username):
+        if self.is_open_user(username) or client_username not in self.get_followers(username):
             self.cursor.execute(f'SELECT username, comment FROM {username}.comments WHERE post_id = %s', (post_id,))
             return self.cursor.fetchall()
         else:
@@ -233,7 +239,7 @@ class SQL:
         """
         :return tuple of all the username of the users who liked the post ((username), ...)
         """
-        if self.is_open_user(username) and client_username not in self.get_followers(username):
+        if self.is_open_user(username) or client_username not in self.get_followers(username):
             self.cursor.execute(f'SELECT username FROM {username}.likes WHERE post_id = %s', (post_id,))
             return self.cursor.fetchall()
         else:
@@ -358,7 +364,7 @@ class SQL:
 
         :return tuple of all the images ids.
         """
-        self.cursor.execute(f'SELECT id FROM {username}.{table}')
+        self.cursor.execute(f'SELECT id FROM {username}.{table} ORDER BY date DESC')
         return self.cursor.fetchall()
 
     def login(self, username, password):

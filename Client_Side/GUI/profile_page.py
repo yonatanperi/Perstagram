@@ -13,7 +13,7 @@ class ProfilePage(AppForm):
         super().__init__(client, self)
         if not username:  # set default username
             self.username = client.get_answer(("get username",))
-            self.default_user = True
+            self.default_user = True  # The client is in his own profile page
         else:
             self.username = username
             self.default_user = False
@@ -38,7 +38,8 @@ class ProfilePage(AppForm):
         if self.default_user:  # edit profile
             self.e_f_button = Button(about_frame, text="Edit Profile", command=self.edit_profile)
         else:
-            if self.username in self.interest_users['following']:
+            if self.client.get_answer(("get username",)) in self.interest_users['follows']:
+                # if the client follows this profile
                 button_text = "unfollow"
             else:  # follow button
                 button_text = "follow"
@@ -65,4 +66,4 @@ class ProfilePage(AppForm):
     def follow(self):
         self.client.send_message((self.e_f_button["text"], self.username))
         time.sleep(1)  # for the server to update the sql
-        self.go_to_page(ProfilePage)
+        self.e_f_button.config(text="follow" if self.e_f_button["text"] == "unfollow" else "unfollow")

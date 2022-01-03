@@ -76,18 +76,11 @@ class HandleUser:
                 self.client.send_message([])
 
         elif recved[0] == "seen post":  # , username, post_id
-            self.sql.remove_from_latest_posts_stack(recved[1], recved[2])
+            self.sql.remove_from_latest_posts_stack(self.client.username, recved[1], recved[2])
 
-        elif recved[0] == "get home page posts":  # , buffer
-            # delete old posts from stack
-            self.sql.delete_old_post_from_stack(self.client.username)
-
-            # send posts ids
-            self.client.send_message(self.sql.get_posts_from_stack(self.client.username, recved[1]))
-
-        elif recved[0] == "get next post":
-            # send post ids
-            self.client.send_message(self.sql.next_post_from_stack(self.client.username))
+        elif recved[0] == "get next post":  # , posts buffer
+            # send username, post ids
+            self.client.send_message(self.sql.next_post_from_stack(self.client.username, recved[1]))
 
         elif recved[0] == "follow":
             self.sql.follow(self.client.username, recved[1])

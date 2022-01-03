@@ -64,7 +64,7 @@ class SearchPage(AppForm):
             Label(current_frame, text=f"@{result}").grid(row=row_index, column=1, padx=10)
 
             # View profile button
-            Button(current_frame, text="View profile", command=lambda: self.go_to_page(ProfilePage, result)) \
+            Button(current_frame, text="View profile", command=lambda m=result: self.go_to_page(ProfilePage, m)) \
                 .grid(row=row_index, column=2, padx=50)
 
             row_index += 1

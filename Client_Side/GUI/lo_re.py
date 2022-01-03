@@ -29,10 +29,12 @@ class LoRe(GUIForm):
         # login button
         self.login_button = Button(self.root, text="Login",
                                    command=lambda: self.lo_re(self.username.get(), self.password.get()))
-        self.login_button.grid(row=3, column=0)
+        self.login_button.grid(row=4, column=0)
+        self.open_user = BooleanVar(self.root, True)
+
         # register button and label
         self.or_instead = Label(self.root, text="or instead")
-        self.or_instead.grid(row=3, column=1)
+        self.or_instead.grid(row=4, column=1)
         self.register_button = Button(self.root, text="Register",
                                       command=lambda: self.register(self.username.get(),
                                                                     self.password.get(),
@@ -40,7 +42,7 @@ class LoRe(GUIForm):
                                                                     self.last_name.get(),
                                                                     self.email.get(),
                                                                     self.open_user.get()))
-        self.register_button.grid(row=3, column=2)
+        self.register_button.grid(row=4, column=2)
 
         # error label
         self.error_text = StringVar()
@@ -63,15 +65,14 @@ class LoRe(GUIForm):
         Label(self.root, text="Email").grid(row=1, column=0),
         Entry(self.root, textvariable=self.email).grid(row=1, column=1)
 
-        self.open_user = BooleanVar()
-        Checkbutton(self.root, text='Open', variable=self.open_user, onvalue=True, offvalue=False).grid(row=2, column=0)
+        Checkbutton(self.root, text='Open', variable=self.open_user).grid(row=3, column=0)
 
         # move register button
         self.or_instead.grid_forget()
         self.login_button.grid_forget()
         self.forgot_password.grid_forget()
         self.register_button.grid_forget()
-        self.register_button.grid(row=3, column=0, pady=7)
+        self.register_button.grid(row=4, column=0, pady=7)
 
         self.register_flag = True
 
