@@ -1,16 +1,15 @@
 import time
 
-from .app_form import AppForm
-from .post_object import Post
+from .scroll_posts_frame import ScrollPostsFrame
 from tkinter import *
 from tkinter.ttk import *
 from PIL import ImageTk
 
 
-class ProfilePage(AppForm):
+class ProfilePage(ScrollPostsFrame):
 
     def __init__(self, client, username=None):
-        super().__init__(client, self)
+
         if not username:  # set default username
             self.username = client.get_answer(("get username",))
             self.default_user = True  # The client is in his own profile page
@@ -18,7 +17,10 @@ class ProfilePage(AppForm):
             self.username = username
             self.default_user = False
 
-        self.scroll_frame = self.get_scrollbar_frame()
+        self.posts_ids = client.get_answer(("get all posts", self.username))
+        self.add_username(self.posts_ids)
+
+        super().__init__(client, 0.7, iter(self.posts_ids))
 
         # About bar
         about_frame = Frame(self.scroll_frame)
@@ -57,11 +59,14 @@ class ProfilePage(AppForm):
                                                                                                    sticky="w")
 
         # All the user's posts
-        self.posts_ids = self.client.get_answer(("get all posts", self.username))
         Label(about_frame, text=f"{len(self.posts_ids)}\nPosts").grid(row=0, column=1, padx=10)  # posts number
 
-        for post_id in self.posts_ids:
-            Post(self.client, self.username, post_id[0], self.scroll_frame).post_frame.pack()
+        # Start packing
+        self.start_packing(about_frame)
+
+    def add_username(self, posts_id):
+        for i in range(len(posts_id)):
+            posts_id[i] = (self.username, posts_id[i][0])
 
     def edit_profile(self):
         # TODO
