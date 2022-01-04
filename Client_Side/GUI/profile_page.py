@@ -1,12 +1,12 @@
 import time
 
-from .scroll_posts_frame import ScrollPostsFrame
+from .smart_scroll_form import SmartScrollForm
 from tkinter import *
 from tkinter.ttk import *
 from PIL import ImageTk
 
 
-class ProfilePage(ScrollPostsFrame):
+class ProfilePage(SmartScrollForm):
 
     def __init__(self, client, username=None):
 

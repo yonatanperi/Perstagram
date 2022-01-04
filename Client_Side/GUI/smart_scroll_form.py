@@ -4,13 +4,24 @@ from tkinter import *
 from tkinter.ttk import *
 
 
-class ScrollPostsFrame(AppForm):
-    POST_NUMBER_LOAD_BUFFER = 3
+class SmartScrollForm(AppForm):
+    ITEM_LOAD_NUMBER_BUFFER = 3
 
-    def __init__(self, client, top_frame_hight_ratio: float, posts_iterable, seen_post=False, bottom_lbl_text=False):
+    def __init__(self, client, top_frame_hight_ratio: float, iterable_scrolling_items, seen_post=False,
+                 bottom_lbl_text=False):
+        """
+        Loads ITEM_LOAD_NUMBER_BUFFER items at first.
+        When the user scrolls over an item's frame another gets loaded.
+        :param client: the client
+        :param top_frame_hight_ratio: most of the time, there is a widget at the top of the screen.
+        This is the ratio of it relative to one item.
+        :param iterable_scrolling_items: an iterable object of the items.
+        :param seen_post: just for the home page. send to the server "seen post" message.
+        :param bottom_lbl_text: at the bottom, there is a label.
+        """
         super().__init__(client, self)
 
-        self.posts_iterable = posts_iterable
+        self.iterable_scrolling_items = iterable_scrolling_items
         self.top_bar_hight_ratio: float = top_frame_hight_ratio  # the top part relative to one post
         self.seen_post: bool = seen_post
         self.bottom_lbl_text = bottom_lbl_text
@@ -21,20 +32,25 @@ class ScrollPostsFrame(AppForm):
         self.posts = []
 
     def start_packing(self, top_frame):
+        """
+        Start the packing of the items
+        :param top_frame: most of the time, there is a widget at the top of the screen.
+        """
         top_frame.pack(pady=15)
 
         # Pack initial posts
-        for index, post in enumerate(self.posts_iterable):
+        for index, post in enumerate(self.iterable_scrolling_items):
             if post:
                 self.posts.append(post)
-                self.pack_post(*post)
+                self.pack_post(*post)  # TODO ask in the init for the function which does this.
 
-            if index >= self.POST_NUMBER_LOAD_BUFFER - 1:
+            if index >= self.ITEM_LOAD_NUMBER_BUFFER - 1:
                 break
 
     def analyze_location(self):
         """
-        Check when the user viewed a frame.
+        Activated when the user scrolls.
+        Checks if the user viewed a frame.
         """
         # Now percentage_location will be set
         # The binomial for this problem is: (x + y - l) / (2 - 2 * l)
@@ -61,7 +77,7 @@ class ScrollPostsFrame(AppForm):
 
             if not self.seen_all_posts:
                 try:
-                    next_post = next(self.posts_iterable)
+                    next_post = next(self.iterable_scrolling_items)
                     self.posts.append(next_post)
                     self.pack_post(*next_post)
 

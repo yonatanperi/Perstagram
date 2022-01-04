@@ -1,9 +1,9 @@
-from .scroll_posts_frame import ScrollPostsFrame
+from .smart_scroll_form import SmartScrollForm
 from tkinter import *
 from tkinter.ttk import *
 
 
-class HomePage(ScrollPostsFrame):
+class HomePage(SmartScrollForm):
 
     def __init__(self, client):
         super().__init__(client, 0.4, self.posts_generator(), True, "You're all caught up!")
@@ -12,11 +12,15 @@ class HomePage(ScrollPostsFrame):
         self.start_packing(top_frame)
 
     def posts_generator(self):
+        """
+        A generator of the (username, post_id)'s of all posts.
+        Simply asking the server each time.
+        """
         index = 0
         while True:
             index += 1
             post = self.client.get_answer(
-                ("get next post", index if index <= self.POST_NUMBER_LOAD_BUFFER else self.POST_NUMBER_LOAD_BUFFER))
+                ("get next post", index if index <= self.ITEM_LOAD_NUMBER_BUFFER else self.ITEM_LOAD_NUMBER_BUFFER))
             if post:
                 yield post
             else:  # when done, post will be None
