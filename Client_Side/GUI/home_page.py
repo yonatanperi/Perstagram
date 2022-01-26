@@ -8,7 +8,10 @@ class HomePage(SmartScrollForm):
     def __init__(self, client):
         super().__init__(client, 0.4, self.posts_generator(), True, "You're all caught up!")
 
-        top_frame = Label(self.scroll_frame, text="perstagram", font=("Billabong", 40))
+        top_frame = Frame(self.scroll_frame)
+        Label(self.scroll_frame, text="perstagram", font=("Billabong", 40)).pack(pady=5)
+        # TODO stories
+
         self.start_packing(top_frame)
 
     def posts_generator(self):

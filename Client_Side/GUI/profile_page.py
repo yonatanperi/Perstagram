@@ -1,6 +1,7 @@
 import time
 
 from .smart_scroll_form import SmartScrollForm
+from .tiny_user import TinyUser
 from tkinter import *
 from tkinter.ttk import *
 from PIL import ImageTk
@@ -34,7 +35,7 @@ class ProfilePage(SmartScrollForm):
 
         # interest users
         self.interest_users = self.client.get_answer(("get interest users", self.username))
-        Label(about_frame, text=f"{len(self.interest_users['follows'])}\nFollows").grid(row=0, column=2, padx=10)
+        Label(about_frame, text=f"{len(self.interest_users['follows'])}\nFollowers").grid(row=0, column=2, padx=10)
         Label(about_frame, text=f"{len(self.interest_users['following'])}\nFollowing").grid(row=0, column=3, padx=10)
 
         # username
@@ -61,12 +62,26 @@ class ProfilePage(SmartScrollForm):
         # All the user's posts
         Label(about_frame, text=f"{len(self.posts_ids)}\nPosts").grid(row=0, column=1, padx=10)  # posts number
 
+        # Suggestions
+        suggestions = self.client.get_answer(("get suggestions",))
+        if suggestions:
+
+            Label(about_frame, text=f"Check out these users!", font=("Helvetica 16 bold", 16)).grid(row=4, column=0, pady=20)
+
+            column_index = 0
+            for current_username in suggestions:
+                TinyUser(self.client, current_username, about_frame).tiny_user_frame.grid(row=5, column=column_index)
+                column_index += 1
+
         # Start packing
         self.start_packing(about_frame)
 
     def add_username(self, posts_id):
+        """
+        adds the username to the posts ids
+        """
         for i in range(len(posts_id)):
-            posts_id[i] = (self.username, posts_id[i][0])
+            posts_id[i] = (self.username, posts_id[i])
 
     def edit_profile(self):
         # TODO

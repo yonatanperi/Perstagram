@@ -34,3 +34,21 @@ class Post:
 
             Label(self.post_frame, text=f"{len(self.post_data['likes'])} Likes!",
                   font=("Helvetica 18 bold", 10), anchor='w').pack(pady=5, padx=10, fill='both')
+
+            opinion_frame = Frame(self.post_frame)
+
+            # like button
+            client_username = self.client.get_answer(("get username",))
+            if client_username != username:
+                button_text = "Dislike" if client_username in self.post_data['likes'] else "Like"
+                Button(opinion_frame,
+                       text=button_text,
+                       command=lambda: self.client.send_message((button_text.lower(), username, post_id))).grid(row=0,
+                                                                                                                column=0,
+                                                                                                                padx=7)
+
+            # view comments button
+            Button(opinion_frame,
+                   text="View Comments").grid(row=0, column=1, padx=7)  # TODO goto comments form
+
+            opinion_frame.pack(pady=5, padx=10)

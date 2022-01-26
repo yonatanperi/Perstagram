@@ -5,7 +5,7 @@ from tkinter import *
 
 
 class AppForm(GUIForm):
-    PAGES = ["Home", "Profile", "Search", "Upload"]
+    PAGES = ["Home", "Profile", "Search", "Upload", "Logout"]
 
     def __init__(self, client, page_class):
         """
@@ -23,25 +23,34 @@ class AppForm(GUIForm):
         for current_page_name in self.PAGES:
             current_button = Button(self.bar_frame, text=current_page_name)
             if current_page_name == page_class.__class__.__name__[:-4]:
-                current_button.configure(command=lambda: self.go_to_page(page_class))
-            else:
-                if current_page_name == "Home":
-                    from .home_page import HomePage
-                    self.home_page = HomePage
-                    current_button.configure(command=lambda: self.go_to_page(HomePage))
-                elif current_page_name == "Profile":
-                    from .profile_page import ProfilePage
-                    current_button.configure(command=lambda: self.go_to_page(ProfilePage))
-                elif current_page_name == "Upload":
-                    from .upload_page import UploadPage
-                    current_button.configure(command=lambda: self.go_to_page(UploadPage))
-                elif current_page_name == "Search":
-                    from .search_page import SearchPage
-                    current_button.configure(command=lambda: self.go_to_page(SearchPage))
+                command = lambda: self.go_to_page(page_class)
+            elif current_page_name == "Home":
+                from .home_page import HomePage
+                self.home_page = HomePage
+                command = lambda: self.go_to_page(HomePage)
+            elif current_page_name == "Profile":
+                from .profile_page import ProfilePage
+                command = lambda: self.go_to_page(ProfilePage)
+            elif current_page_name == "Upload":
+                from .upload_page import UploadPage
+                command = lambda: self.go_to_page(UploadPage)
+            elif current_page_name == "Search":
+                from .search_page import SearchPage
+                command = lambda: self.go_to_page(SearchPage)
+            elif current_page_name == "Logout":
+                command = self.logout
+
+            current_button.configure(command=command)
 
             current_button.grid(row=0, column=column_index)
 
             column_index += 1
+
+    def logout(self):
+        self.client.send_message(("logout",))
+
+        from .lo_re import LoRe
+        self.go_to_page(LoRe)
 
     def on_mousewheel(self, event):
         self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")

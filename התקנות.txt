@@ -3,3 +3,5 @@ python 3
 mysql - 'perstagram' schema. reset sql from the py file
 Pillow
 Billabong Font
+captcha
+pip install --upgrade google-cloud-vision
