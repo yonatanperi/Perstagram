@@ -1,9 +1,11 @@
 import datetime
+from shutil import rmtree
 from typing import List
 
 import mysql.connector
 import pickle
 import hashlib
+import os
 
 
 class SQL:
@@ -12,8 +14,13 @@ class SQL:
     BIO_MAX_LENGTH = 500
     SHA256_LENGTH = 64
     POST_MAX_DATE_IN_STACK = datetime.timedelta(weeks=2)
+    USER_MAX_TAGS = 4
+    MAIN_TAGS_NUMBER = 10
+    SUGGESTIONS_LIST_LENGTH = 4
+    MAX_ACTIVITY_TAGS = 50
+    MIN_SUGGESTIONS_MATCH = .3
 
-    def __init__(self):
+    def __init__(self, server=None):
         """
         connects to the sql server and database.
         """
@@ -25,6 +32,7 @@ class SQL:
         )
 
         self.cursor = self.db.cursor()
+        self.server = server
 
     def create_db(self):
         """
@@ -58,7 +66,8 @@ class SQL:
                     FOREIGN KEY (username) REFERENCES users_info(username) ON DELETE CASCADE,
                     profile_photo MEDIUMBLOB,
                     bio VARCHAR({self.BIO_MAX_LENGTH}),
-                    open BOOLEAN NOT NULL DEFAULT True)""")
+                    open BOOLEAN NOT NULL DEFAULT True,
+                    main_tags MEDIUMBLOB)""")
 
         self.db.commit()
         self.register_admin()
@@ -104,7 +113,8 @@ class SQL:
             f"""CREATE TABLE IF NOT EXISTS {username}.posts (
                     id INT NOT NULL PRIMARY KEY,
                     date DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
-                    byte_photo MEDIUMBLOB NOT NULL)""")
+                    byte_photo MEDIUMBLOB NOT NULL,
+                    tags BLOB)""")
 
         self.cursor.execute(
             f"""CREATE TABLE IF NOT EXISTS {username}.comments (
@@ -126,7 +136,8 @@ class SQL:
             f"""CREATE TABLE IF NOT EXISTS {username}.stories (
                             id INT NOT NULL PRIMARY KEY,
                             date DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
-                            byte_photo MEDIUMBLOB NOT NULL)""")
+                            byte_photo MEDIUMBLOB NOT NULL,
+                            tags BLOB)""")
 
         self.cursor.execute(
             f"""CREATE TABLE IF NOT EXISTS {username}.interest_users (
@@ -139,10 +150,11 @@ class SQL:
 
         self.cursor.execute(
             f"""CREATE TABLE IF NOT EXISTS {username}.latest_posts_stack (
-                                                username VARCHAR({self.NAME_MAX_LENGTH}) NOT NULL,
-                                                FOREIGN KEY (username) REFERENCES perstagram.users_info(username) ON DELETE CASCADE,
-                                                post_id INT NOT NULL,
-                                                date DATETIME NOT NULL)""")
+                                                        username VARCHAR({self.NAME_MAX_LENGTH}) NOT NULL,
+                                                        FOREIGN KEY (username) REFERENCES perstagram.users_info(username) ON DELETE CASCADE,
+                                                        post_id INT NOT NULL,
+                                                        date DATETIME NOT NULL)""")
+
         if not open_user:
             self.cursor.execute(
                 f"""CREATE TABLE IF NOT EXISTS {username}.follow_requests (
@@ -225,6 +237,10 @@ class SQL:
         self.cursor.execute(f'SELECT username FROM {username}.interest_users WHERE follows = 1')
         return self.ugly_list_2_list(self.cursor.fetchall())
 
+    def get_following(self, username):
+        self.cursor.execute(f'SELECT username FROM {username}.interest_users WHERE following = 1')
+        return self.ugly_list_2_list(self.cursor.fetchall())
+
     def get_comments(self, username, post_id, client_username):
         """
         :return tuple of all the comments ((username, comment), ...)
@@ -237,21 +253,25 @@ class SQL:
 
     def get_likes(self, username, post_id, client_username):
         """
-        :return tuple of all the username of the users who liked the post ((username), ...)
+        :return tuple of all the username of the users who liked the post (username, ...)
         """
         if self.is_open_user(username) or client_username not in self.get_followers(username):
             self.cursor.execute(f'SELECT username FROM {username}.likes WHERE post_id = %s', (post_id,))
-            return self.cursor.fetchall()
+            return self.ugly_list_2_list(self.cursor.fetchall())
         else:
             return "closed!"
 
+    def get_tags(self, username, post_id):
+        """
+        :return tuple of tags
+        """
+        self.cursor.execute(f'SELECT tags FROM {username}.posts WHERE id = %s', (post_id,))
+        return pickle.loads(self.cursor.fetchall()[0][0])
+
     def get_date(self, username, post_id, client_username):
-        """
-        :return tuple of all the username of the users who liked the post ((username), ...)
-        """
         if self.is_open_user(username) and client_username not in self.get_followers(username):
             self.cursor.execute(f'SELECT username FROM {username}.date WHERE post_id = %s', (post_id,))
-            return self.cursor.fetchall()
+            return self.cursor.fetchall()[0][0]
         else:
             return "closed!"
 
@@ -262,7 +282,7 @@ class SQL:
         :param table: posts or stories
         :param client_username: the client's username
 
-        :return tuple of all the username of the users who liked the post ((username), ...)
+        :return the photo
         """
         if self.is_open_user(username) or client_username not in self.get_followers(username):
             self.cursor.execute(f'SELECT byte_photo FROM {username}.{table} WHERE id = %s', (photo_id,))
@@ -291,6 +311,49 @@ class SQL:
         """
         self.cursor.execute("SELECT bio FROM users_profile WHERE username = %s", (username,))
         return self.cursor.fetchall()[0][0]
+
+    def like(self, client_username, username, post_id):
+        """
+        likes a post and saves the activity tags.
+        :param client_username: the user who liked the post
+        :param username: the owner of the post
+        :param post_id: the post id
+        """
+        self.cursor.execute(f"INSERT INTO {username}.likes (username, post_id) VALUES (%s, %s)",
+                            (client_username, post_id))
+
+        # update the activity file system
+        post_tags = self.get_tags(username, post_id)
+        f_write = open(f"activity/{client_username}.txt", "a")
+        f_read = open(f"activity/{client_username}.txt", "r")
+        activity_tags = f_read.read().splitlines()
+        f_read.close()
+
+        line_number = len(activity_tags)
+        for tag in post_tags:
+            if line_number > self.MAX_ACTIVITY_TAGS:
+                activity_tags[0] = tag
+
+                open(f'activity/{client_username}.txt', 'w').close()  # reset the file
+
+                for line in activity_tags:
+                    f_write.write(line)
+
+            else:
+                f_write.write(f"{tag}")
+            line_number += 1
+
+        f_write.close()
+
+    def dislike(self, client_username, username, post_id):
+        """
+        dislikes a post.
+        :param client_username: the user who disliked the post
+        :param username: the owner of the post
+        :param post_id: the post id
+        """
+        self.cursor.execute(f"DELETE FROM {username}.likes WHERE username = %s AND post_id = %s",
+                            (client_username, post_id))
 
     def follow(self, follower: str, followed: str, check_for_open: bool = True):
         """
@@ -365,7 +428,19 @@ class SQL:
         :return tuple of all the images ids.
         """
         self.cursor.execute(f'SELECT id FROM {username}.{table} ORDER BY date DESC')
-        return self.cursor.fetchall()
+        return self.ugly_list_2_list(self.cursor.fetchall())
+
+    def get_user_tags(self, username):
+        """
+        :param username: the username
+
+        :return tuple of the tags.
+        """
+        self.cursor.execute(f'SELECT main_tags FROM users_profile WHERE username = %s', (username,))
+        dump_tags = self.cursor.fetchall()[0][0]
+        if dump_tags:
+            return pickle.loads(dump_tags)
+        return []
 
     def login(self, username, password):
         """
@@ -385,7 +460,7 @@ class SQL:
         :return: all the usernames in the db
         """
         self.cursor.execute("SELECT username FROM users_info")
-        return self.cursor.fetchall()
+        return self.ugly_list_2_list(self.cursor.fetchall())
 
     def get_user_type(self, username):
         self.cursor.execute('SELECT user_type FROM users_authentication WHERE username = %s', (username,))
@@ -423,11 +498,97 @@ class SQL:
         else:
             post_id += 1
 
-        self.cursor.execute(f"INSERT INTO {username}.{table} (id, byte_photo) VALUES (%s, %s)",
-                            (post_id, pickle.dumps(image)))
+        # update the user's schema
+        self.cursor.execute(f"INSERT INTO {username}.{table} (id, byte_photo, tags) VALUES (%s, %s, %s)",
+                            (post_id, pickle.dumps(image), pickle.dumps(self.server.classify_image(image))))
+        self.db.commit()
+
+        # update the main schema
+        self.cursor.execute(f"UPDATE users_profile SET main_tags = %s WHERE username = %s",
+                            (pickle.dumps(self.analyze_user(username)), username))
+
         self.db.commit()
 
         return post_id
+
+    def analyze_user(self, username) -> List:
+        """
+        Set the main tags of the user in the sql.
+        """
+
+        # set tags_list
+        tags_list = []
+        for post_id in self.get_user_photos_id(username, "posts"):
+            tags_list += self.get_tags(username, post_id)
+
+        return self.get_main_tags(tags_list, self.USER_MAX_TAGS)
+
+    @staticmethod
+    def get_main_tags(tags, buffer) -> List:
+        # set the main tags
+        main_tags = []
+        for i in range(buffer):
+            if tags:
+                current_tag = max(set(tags), key=tags.count)
+                main_tags.append(current_tag)
+                tags.remove(current_tag)  # remove one instance
+
+        return main_tags
+
+    def get_suggestions(self, username) -> List[str]:
+        """
+        finds the most matching users based on their activity
+        :param username: user to match.
+
+        :return: list of all the matching usernames
+        """
+        try:
+            with open(f"activity/{username}.txt", "r") as f:
+                activity_tags = f.read().splitlines()
+
+        except FileNotFoundError:  # no recorded activity
+            return []
+
+        # sort to main tags
+        activity_main_tags = self.get_main_tags(activity_tags, buffer=self.MAIN_TAGS_NUMBER)
+
+        # get all potential users to match
+        potential_users = [item for item in list(self.get_all_usernames()) if
+                           item not in list(self.get_following(username))]
+        potential_users.remove(username)
+
+        suggestions = []
+        for i in range(self.SUGGESTIONS_LIST_LENGTH):
+            if not potential_users:
+                break
+            # get the best user
+            best_user = ("", 0)  # username, matching percentage
+            for current_username in potential_users:
+                current_tags = self.get_user_tags(current_username)
+                current_match = self.match_tags(activity_main_tags, current_tags)
+
+                if current_match >= best_user[1] and current_match > self.MIN_SUGGESTIONS_MATCH:
+                    best_user = (current_username, current_match)
+
+            if best_user[0] != "":  # if it exists
+                suggestions.append(best_user[0])
+                potential_users.remove(best_user[0])
+
+        return suggestions
+
+    @staticmethod
+    def match_tags(tags1, tags2):
+        """
+        matches tags1 to tags2
+
+        :return: the matching rate in range: [0, 1]
+        """
+
+        matching_points = 0
+        for i in tags1:
+            matching_points += 1 if i in tags2 else 0
+
+        return matching_points / len(tags1)
 
     def set_profile_photo(self, username, image):
         """
@@ -456,6 +617,9 @@ class SQL:
         delete all user schemas.
         """
 
+        rmtree("activity")
+        os.mkdir("activity")
+
         self.cursor.execute("SELECT username from users_info")
         for schema in self.cursor.fetchall():
             self.cursor.execute(f"DROP SCHEMA IF EXISTS {schema[0]}")
@@ -469,6 +633,14 @@ class SQL:
         self.db.commit()
 
         self.create_tables()
+
+    def replace_password(self, users_email: str, password: str):
+        self.cursor.execute(f"SELECT username FROM users_info WHERE email = %s", (users_email,))
+        username = self.cursor.fetchall()[0][0]
+        self.cursor.execute(f"UPDATE users_authentication SET password = %s WHERE username = %s",
+                            (self.sha256(password), username))
+
+        self.db.commit()
 
     @staticmethod
     def sha256(string):

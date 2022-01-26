@@ -70,7 +70,7 @@ class ProfilePage(SmartScrollForm):
 
             column_index = 0
             for current_username in suggestions:
-                TinyUser(self.client, current_username, about_frame).tiny_user_frame.grid(row=5, column=column_index)
+                TinyUser(self.client, current_username, about_frame, True, ProfilePage, self.go_to_page).tiny_user_frame.grid(row=5, column=column_index)
                 column_index += 1
 
         # Start packing

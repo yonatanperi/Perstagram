@@ -10,10 +10,11 @@ class HandleUser:
 
     DEFAULT_SEARCH_BUFFER = 10
 
-    def __init__(self, client, search_object):
+    def __init__(self, client, server, LoRe):
         self.client = client
-        self.sql = SQL()
-        self.search_object = search_object
+        self.sql = SQL(server)
+        self.server = server
+        self.LoRe = LoRe
 
     def handle(self):
         recved = self.client.recv_message()  # structure: ["request", *args]
@@ -55,11 +56,14 @@ class HandleUser:
                     following.append(interest_user[0])
             self.client.send_message({"follows": follows, "following": following})
 
+        elif recved[0] == "get suggestions":
+            self.client.send_message(self.sql.get_suggestions(self.client.username))
+
         elif recved[0] == "get post":
             # send a dict: {image:, comments:, likes:}
-            image = self.sql.get_photo(recved[1], recved[2], "posts", self.client.username)
-            comments = self.sql.get_comments(recved[1], recved[2], self.client.username)
-            likes = self.sql.get_likes(recved[1], recved[2], self.client.username)
+            image = self.sql.get_photo(*recved[1:], "posts", self.client.username)
+            comments = self.sql.get_comments(*recved[1:], self.client.username)
+            likes = self.sql.get_likes(*recved[1:], self.client.username)
             self.client.send_message({"image": image, "comments": comments, "likes": likes})
 
         elif recved[0] == "get all posts":
@@ -70,13 +74,13 @@ class HandleUser:
             # search and send back the results
             if recved[1]:
                 self.client.send_message(
-                    self.search_object.get_results(recved[1], self.DEFAULT_SEARCH_BUFFER)
+                    self.server.search_object.get_results(recved[1], self.DEFAULT_SEARCH_BUFFER)
                 )
             else:
                 self.client.send_message([])
 
         elif recved[0] == "seen post":  # , username, post_id
-            self.sql.remove_from_latest_posts_stack(self.client.username, recved[1], recved[2])
+            self.sql.remove_from_latest_posts_stack(self.client.username, *recved[1:])
 
         elif recved[0] == "get next post":  # , posts buffer
             # send username, post ids
@@ -87,5 +91,12 @@ class HandleUser:
 
         elif recved[0] == "unfollow":
             self.sql.unfollow(self.client.username, recved[1])
+
+        elif recved[0] in ("like", "dislike"):  # , username,  post_id
+            {"like": self.sql.like,
+             "dislike": self.sql.dislike}[recved[0]](self.client.username, *recved[1:])
+
+        elif recved[0] == "logout":
+            return self.LoRe(self.client, self.server).authenticate_client()
 
         self.handle()
