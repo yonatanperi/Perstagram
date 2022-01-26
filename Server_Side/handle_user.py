@@ -70,6 +70,13 @@ class HandleUser:
             # send all posts ids
             self.client.send_message(self.sql.get_user_photos_id(recved[1], "posts"))
 
+        elif recved[0] == "get stories":  # , username
+            # sends the id's
+            self.client.send_message(self.sql.get_user_photos_id(recved[1], "stories"))
+
+        elif recved[0] == "get story":  # , username, id
+            self.client.send_message(self.sql.get_photo(*recved[1:], "stories", self.client.username))
+
         elif recved[0] == "search":
             # search and send back the results
             if recved[1]:
@@ -98,5 +105,8 @@ class HandleUser:
 
         elif recved[0] == "logout":
             return self.LoRe(self.client, self.server).authenticate_client()
+
+        else:
+            self.client.send_message("unknown command.")
 
         self.handle()

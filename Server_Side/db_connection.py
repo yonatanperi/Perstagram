@@ -285,6 +285,11 @@ class SQL:
         :return the photo
         """
         if self.is_open_user(username) or client_username not in self.get_followers(username):
+            # remove old stories
+            if table == "stories":
+                self.cursor.execute(f'DELETE FROM {username}.{table} WHERE date < %s',
+                                    (datetime.datetime.now() - datetime.timedelta(days=1),))
+
             self.cursor.execute(f'SELECT byte_photo FROM {username}.{table} WHERE id = %s', (photo_id,))
             return pickle.loads(self.cursor.fetchall()[0][0])
         else:

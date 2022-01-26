@@ -5,7 +5,7 @@ from tkinter import *
 
 
 class AppForm(GUIForm):
-    PAGES = ["Home", "Profile", "Search", "Upload", "Logout"]
+    PAGES = ["Home", "Story", "Profile", "Search", "Upload", "Logout"]
 
     def __init__(self, client, page_class):
         """
@@ -28,6 +28,9 @@ class AppForm(GUIForm):
                 from .home_page import HomePage
                 self.home_page = HomePage
                 command = lambda: self.go_to_page(HomePage)
+            elif current_page_name == "Story":
+                from .story_page import StoryPage
+                command = lambda: self.go_to_page(StoryPage)
             elif current_page_name == "Profile":
                 from .profile_page import ProfilePage
                 command = lambda: self.go_to_page(ProfilePage)
