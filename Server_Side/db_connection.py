@@ -145,6 +145,13 @@ class SQL:
                                     FOREIGN KEY (username) REFERENCES perstagram.users_info(username) ON DELETE CASCADE,
                                     follows BOOLEAN,
                                     following BOOLEAN)""")
+
+        self.cursor.execute(
+            f"""CREATE TABLE IF NOT EXISTS {username}.seen_stories (
+                                    username VARCHAR({self.NAME_MAX_LENGTH}) NOT NULL,
+                                    id INT NOT NULL,
+                                    date DATETIME NOT NULL)""")
+
         # followers - people follows me
         # following - people I follow
 
@@ -268,9 +275,9 @@ class SQL:
         self.cursor.execute(f'SELECT tags FROM {username}.posts WHERE id = %s', (post_id,))
         return pickle.loads(self.cursor.fetchall()[0][0])
 
-    def get_date(self, username, post_id, client_username):
-        if self.is_open_user(username) and client_username not in self.get_followers(username):
-            self.cursor.execute(f'SELECT username FROM {username}.date WHERE post_id = %s', (post_id,))
+    def get_date(self, username, photo_id, client_username, table):
+        if self.is_open_user(username) or client_username not in self.get_followers(username):
+            self.cursor.execute(f'SELECT date FROM {username}.{table} WHERE id = %s', (photo_id,))
             return self.cursor.fetchall()[0][0]
         else:
             return "closed!"
@@ -287,13 +294,44 @@ class SQL:
         if self.is_open_user(username) or client_username not in self.get_followers(username):
             # remove old stories
             if table == "stories":
-                self.cursor.execute(f'DELETE FROM {username}.{table} WHERE date < %s',
-                                    (datetime.datetime.now() - datetime.timedelta(days=1),))
+                self.remove_old_stories(username)
 
             self.cursor.execute(f'SELECT byte_photo FROM {username}.{table} WHERE id = %s', (photo_id,))
             return pickle.loads(self.cursor.fetchall()[0][0])
         else:
             return "closed!"
+
+    def remove_old_stories(self, username):
+        self.cursor.execute(f'DELETE FROM {username}.stories WHERE date < %s',
+                            (datetime.datetime.now() - datetime.timedelta(days=1),))
+
+        self.db.commit()
+
+    def get_seen_stories(self, client_username):
+        """
+        for the user to not see stories again.
+        :param client_username:
+        :return: tuple of tuples of the username and id
+        """
+        self.cursor.execute(f'SELECT username, id FROM {client_username}.seen_stories')
+        return self.cursor.fetchall()
+
+    def seen_story(self, client_username, *args):
+        """
+        registers the activity in the seen stories' table of the user
+        :param client_username:
+        :param args: username and story id
+        """
+        # remove old ones
+        self.cursor.execute(
+            f'DELETE FROM {client_username}.seen_stories WHERE date  < %s',
+            (datetime.datetime.now() - datetime.timedelta(days=1),))
+
+        # insert
+        self.cursor.execute(
+            f'INSERT INTO {client_username}.seen_stories (username, id, date) VALUES (%s, %s, %s)',
+            (*args, self.get_date(*args, client_username, "stories")))
+        self.db.commit()
 
     def get_profile_photo(self, username):
         """
@@ -432,6 +470,10 @@ class SQL:
 
         :return tuple of all the images ids.
         """
+        # remove old stories
+        if table == "stories":
+            self.remove_old_stories(username)
+
         self.cursor.execute(f'SELECT id FROM {username}.{table} ORDER BY date DESC')
         return self.ugly_list_2_list(self.cursor.fetchall())
 
@@ -655,5 +697,3 @@ class SQL:
     def ugly_list_2_list(ugly_list: List[tuple]):
         # [(a), (b), ...] -> [a, b, ...]
         return list(map(lambda t: t[0], ugly_list))
-
-# SQL().reset_db()

@@ -15,14 +15,16 @@ import socket
 class Server:
 
     def __init__(self):
+        # set server socket
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-    def start(self, ip, port):
 
         # set search object
         self.search_object = Search(SQL().get_all_usernames())
+
+        # set classification function
         self.classify_image = ImageClassification().classify
 
+    def start(self, ip, port):
         # starts listening to income clients
         self.server_socket.bind((ip, port))
         self.server_socket.listen(5)

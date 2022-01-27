@@ -77,12 +77,18 @@ class HandleUser:
         elif recved[0] == "get story":  # , username, id
             self.client.send_message(self.sql.get_photo(*recved[1:], "stories", self.client.username))
 
+        elif recved[0] == "get seen stories":
+            self.client.send_message(self.sql.get_seen_stories(self.client.username))
+
+        elif recved[0] == "seen story":  # , username, id
+            self.sql.seen_story(self.client.username, *recved[1:])
+
         elif recved[0] == "search":
             # search and send back the results
             if recved[1]:
-                self.client.send_message(
-                    self.server.search_object.get_results(recved[1], self.DEFAULT_SEARCH_BUFFER)
-                )
+                results = self.server.search_object.get_results(recved[1], self.DEFAULT_SEARCH_BUFFER)
+                results.remove(self.client.username)
+                self.client.send_message(results)
             else:
                 self.client.send_message([])
 

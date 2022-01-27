@@ -56,10 +56,17 @@ class StoryPage(AppForm):
 
     def get_next_story_image(self):
         """
-
+        This is a generator.
+        Asks the server for the next story every time and.
         """
+
+        seen_stories = self.client.get_answer(("get seen stories",))
+
         for username in self.client.get_answer(("get interest users", self.client.get_answer(("get username", ))))[
             "following"]:
             stories_id = self.client.get_answer(("get stories", username))
             for story_id in stories_id:
-                yield username, self.client.get_answer(("get story", username, story_id))
+                ui = (username, story_id)  # username and id
+                if ui not in seen_stories:
+                    self.client.send_message(("seen story", *ui))
+                    yield username, self.client.get_answer(("get story", *ui))
