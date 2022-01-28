@@ -1,14 +1,13 @@
 from .app_form import AppForm
-from .post_object import Post
 from tkinter import *
 from tkinter.ttk import *
 
 
 class SmartScrollForm(AppForm):
-    ITEM_LOAD_NUMBER_BUFFER = 3
 
-    def __init__(self, client, top_frame_hight_ratio: float, iterable_scrolling_items, seen_post=False,
-                 bottom_lbl_text=False):
+    def __init__(self, client, top_frame_hight_ratio: float, iterable_scrolling_items, pack_item_func,
+                 seen_post: bool = False, bottom_lbl_text: bool = False, direction: bool = False,
+                 item_load_number_buffer: int = 3):
         """
         Loads ITEM_LOAD_NUMBER_BUFFER items at first.
         When the user scrolls over an item's frame another gets loaded.
@@ -16,8 +15,10 @@ class SmartScrollForm(AppForm):
         :param top_frame_hight_ratio: most of the time, there is a widget at the top of the screen.
         This is the ratio of it relative to one item.
         :param iterable_scrolling_items: an iterable object of the items.
+        :param pack_item_func: The method which packs the items
         :param seen_post: just for the home page. send to the server "seen post" message.
         :param bottom_lbl_text: at the bottom, there is a label.
+        :param direction: False - scrolling down, True - scrolling up
         """
         super().__init__(client, self)
 
@@ -26,10 +27,13 @@ class SmartScrollForm(AppForm):
         self.seen_post: bool = seen_post
         self.bottom_lbl_text = bottom_lbl_text
         self.scroll_frame = self.get_scrollbar_frame()
+        self.pack_item = pack_item_func
+        self.direction = direction
+        self.item_load_number_buffer = item_load_number_buffer
 
-        self.seen_all_posts: bool = False
-        self.current_post_index = 0
-        self.posts = []
+        self.seen_all_items: bool = False
+        self.current_item_index = 0
+        self.items = []
 
     def start_packing(self, top_frame):
         """
@@ -39,13 +43,17 @@ class SmartScrollForm(AppForm):
         top_frame.pack(pady=15)
 
         # Pack initial posts
-        for index, post in enumerate(self.iterable_scrolling_items):
-            if post:
-                self.posts.append(post)
-                self.pack_post(*post)  # TODO ask in the init for the function which does this.
+        for index, item in enumerate(self.iterable_scrolling_items):
+            if item:
+                self.items.append(item)
+                self.pack_item(*item)
 
-            if index >= self.ITEM_LOAD_NUMBER_BUFFER - 1:
+            if index >= self.item_load_number_buffer - 1:
                 break
+
+        if self.direction:
+            # show bottom of canvas
+            self.canvas.yview_moveto('1.0')
 
     def analyze_location(self):
         """
@@ -66,28 +74,28 @@ class SmartScrollForm(AppForm):
         else:
             percentage_location = x / (1 - y + x)
 
-        if percentage_location >= (self.top_bar_hight_ratio + self.current_post_index + 1) / (
-                self.top_bar_hight_ratio + len(self.posts)) and self.current_post_index < len(self.posts):
+        current_item_percentage = (self.top_bar_hight_ratio + self.current_item_index + 1) / (
+                self.top_bar_hight_ratio + len(self.items))
+        condition: bool = percentage_location <= 1 - current_item_percentage if self.direction else percentage_location >= current_item_percentage
+
+        if condition and self.current_item_index < len(self.items):
             # don't even ask about the condition line
             # passed post
             if self.seen_post:
-                self.client.send_message(("seen post", *self.posts[self.current_post_index]))
+                self.client.send_message(("seen post", *self.items[self.current_item_index]))
 
-            self.current_post_index += 1
+            self.current_item_index += 1
 
-            if not self.seen_all_posts:
+            if not self.seen_all_items:
                 try:
-                    next_post = next(self.iterable_scrolling_items)
-                    self.posts.append(next_post)
-                    self.pack_post(*next_post)
+                    next_item = next(self.iterable_scrolling_items)
+                    self.items.append(next_item)
+                    self.pack_item(*next_item)
 
                 except StopIteration:  # this happens ones
-                    self.seen_all_posts = True
+                    self.seen_all_items = True
                     if self.bottom_lbl_text:
                         Label(self.scroll_frame, text=self.bottom_lbl_text, font=("Helvetica 14 bold", 18)).pack(
                             pady=15,
                             fill='x',
                             expand=True)
-
-    def pack_post(self, username, post_id):
-        Post(self.client, username, post_id, self.scroll_frame).post_frame.pack(pady=10)

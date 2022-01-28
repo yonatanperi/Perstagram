@@ -19,6 +19,7 @@ class SQL:
     SUGGESTIONS_LIST_LENGTH = 4
     MAX_ACTIVITY_TAGS = 50
     MIN_SUGGESTIONS_MATCH = .3
+    DIRECT_MESSAGE_MAX_LENGTH = 200
 
     def __init__(self, server=None):
         """
@@ -152,6 +153,12 @@ class SQL:
                                     id INT NOT NULL,
                                     date DATETIME NOT NULL)""")
 
+        self.cursor.execute(
+            f"""CREATE TABLE IF NOT EXISTS {username}.direct_messages (
+                                            username VARCHAR({self.NAME_MAX_LENGTH}) NOT NULL,
+                                            date DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                                            message VARCHAR({self.DIRECT_MESSAGE_MAX_LENGTH}) NOT NULL)""")
+
         # followers - people follows me
         # following - people I follow
 
@@ -182,9 +189,49 @@ class SQL:
         :param username:
         :return: boolean...
         """
-        self.cursor.execute(f'select open from users_profile where username = %s',
+        self.cursor.execute(f'SELECT open FROM users_profile WHERE username = %s',
                             (username,))
         return self.cursor.fetchall()[0][0] == 1
+
+    def get_direct_messages(self, client_username):
+        """
+        pops from the db the unseen messages.
+        :param client_username: the chating user
+        :return: tuple of: (username, date, the message)
+        """
+        self.cursor.execute(f'SELECT * FROM {client_username}.direct_messages')
+        messages = self.cursor.fetchall()
+        self.cursor.execute(f'DELETE FROM {client_username}.direct_messages')
+        self.db.commit()
+
+        return messages
+
+    def get_specific_direct_messages(self, client_username, username):
+        """
+        pops from the db the unseen messages of a specific user.
+        :param client_username: the chating user
+        :param username: the specific user
+        :return: tuple of: (username, date, the message)
+        """
+        self.cursor.execute(f'SELECT * FROM {client_username}.direct_messages WHERE username = %s', (username,))
+        messages = self.cursor.fetchall()
+        self.cursor.execute(f'DELETE FROM {client_username}.direct_messages WHERE username = %s', (username,))
+        self.db.commit()
+
+        return messages
+
+    def insert_direct_message(self, sender, recver, message):
+        """
+        insert the message details in the recver schema
+
+        :param sender: the user who sent the message
+        :param recver: the user who recv the message
+        :param message: the actual message
+        """
+        self.cursor.execute(
+            f'INSERT INTO {recver}.direct_messages (username, message) VALUES (%s, %s)',
+            (sender, message))
+        self.db.commit()
 
     def get_posts_from_stack(self, username, buffer):
         """
@@ -697,3 +744,5 @@ class SQL:
     def ugly_list_2_list(ugly_list: List[tuple]):
         # [(a), (b), ...] -> [a, b, ...]
         return list(map(lambda t: t[0], ugly_list))
+
+# SQL().reset_db()

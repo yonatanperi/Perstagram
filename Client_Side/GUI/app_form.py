@@ -1,11 +1,9 @@
-from abc import abstractmethod
-
 from .gui_form import GUIForm
 from tkinter import *
 
 
 class AppForm(GUIForm):
-    PAGES = ["Home", "Story", "Profile", "Search", "Upload", "Logout"]
+    PAGES = ["Home", "Story", "Profile", "Search", "Upload", "Direct", "Logout"]
 
     def __init__(self, client, page_class):
         """
@@ -40,6 +38,9 @@ class AppForm(GUIForm):
             elif current_page_name == "Search":
                 from .search_page import SearchPage
                 command = lambda: self.go_to_page(SearchPage)
+            elif current_page_name == "Direct":
+                from .direct_page import DirectPage
+                command = lambda: self.go_to_page(DirectPage)
             elif current_page_name == "Logout":
                 command = self.logout
 

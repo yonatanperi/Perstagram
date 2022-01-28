@@ -87,7 +87,10 @@ class HandleUser:
             # search and send back the results
             if recved[1]:
                 results = self.server.search_object.get_results(recved[1], self.DEFAULT_SEARCH_BUFFER)
-                results.remove(self.client.username)
+                try:
+                    results.remove(self.client.username)
+                except ValueError:  # not in results
+                    pass
                 self.client.send_message(results)
             else:
                 self.client.send_message([])
@@ -105,9 +108,26 @@ class HandleUser:
         elif recved[0] == "unfollow":
             self.sql.unfollow(self.client.username, recved[1])
 
+        elif recved[0] == "get direct messages":
+            # only the unseen ones.
+            temp_sql = SQL(self.server)  # Sometimes there is a problem in the sql connection at this point
+            self.client.send_message(temp_sql.get_direct_messages(self.client.username))
+            temp_sql.db.close()
+
+        elif recved[0] == "get specific direct messages":  # , username
+            # only the unseen ones.
+            self.client.send_message(self.sql.get_specific_direct_messages(self.client.username, recved[1]))
+
+        elif recved[0] == "send direct message":  # , username, message
+            self.sql.insert_direct_message(self.client.username, *recved[1:])
+
         elif recved[0] in ("like", "dislike"):  # , username,  post_id
             {"like": self.sql.like,
              "dislike": self.sql.dislike}[recved[0]](self.client.username, *recved[1:])
+
+        elif recved[0] == "done":
+            # for the thread in the chat to know that's it.
+            self.client.send_message("done")
 
         elif recved[0] == "logout":
             return self.LoRe(self.client, self.server).authenticate_client()

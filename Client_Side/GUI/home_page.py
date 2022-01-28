@@ -1,17 +1,19 @@
 from .smart_scroll_form import SmartScrollForm
 from tkinter import *
 from tkinter.ttk import *
+from .post_object import Post
 
 
 class HomePage(SmartScrollForm):
 
     def __init__(self, client):
-        super().__init__(client, 0.4, self.posts_generator(), True, "You're all caught up!")
+        super().__init__(client, 0.4, self.posts_generator(),
+                         lambda username, post_id: Post(self.client, username, post_id,
+                                                        self.scroll_frame).post_frame.pack(pady=10),
+                         True, "You're all caught up!")
 
         top_frame = Frame(self.scroll_frame)
         Label(self.scroll_frame, text="perstagram", font=("Billabong", 40)).pack(pady=5)
-        # TODO stories
-
         self.start_packing(top_frame)
 
     def posts_generator(self):
@@ -23,7 +25,7 @@ class HomePage(SmartScrollForm):
         while True:
             index += 1
             post = self.client.get_answer(
-                ("get next post", index if index <= self.ITEM_LOAD_NUMBER_BUFFER else self.ITEM_LOAD_NUMBER_BUFFER))
+                ("get next post", index if index <= self.item_load_number_buffer else self.item_load_number_buffer))
             if post:
                 yield post
             else:  # when done, post will be None

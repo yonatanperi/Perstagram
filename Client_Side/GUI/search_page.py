@@ -7,15 +7,26 @@ from typing import List
 from .app_form import AppForm
 from tkinter import *
 from tkinter.ttk import *
-from PIL import ImageTk
-
+from .tiny_user import TinyUser
 from .profile_page import ProfilePage
 
 
 class SearchPage(AppForm):
 
-    def __init__(self, client):
+    def __init__(self, client, button_options: tuple = None):
+        """
+
+        :param client:
+        :param button_options: a tuple of: (text, page to go when clicked)
+        """
         super().__init__(client, self)
+
+        if button_options:
+            button_options = list(button_options)
+            button_options[1] = self.go_to_page  # to make sure the go_to_page_function is correct
+            self.button_options = button_options
+        else:  # default is view profile
+            self.button_options = ProfilePage.get_view_profile_button_options(self.go_to_page)
 
         self.results_frames = []
 
@@ -45,26 +56,10 @@ class SearchPage(AppForm):
 
         # show new results
         self.results_frames = []
-        row_index = 0
 
         for result in usernames:
             # result frame
-            current_frame = Frame(self.scroll_frame)
+
+            current_frame = TinyUser(self.client, result, self.scroll_frame, False, self.button_options).tiny_user_frame
             self.results_frames.append(current_frame)
             current_frame.pack(fill=X)
-
-            # profile photo
-            profile_photo = ImageTk.PhotoImage(
-                self.client.get_answer(("get profile photo", result)))  # TODO put this in thread
-            profile_photo_lbl = Label(current_frame, image=profile_photo)
-            profile_photo_lbl.image = profile_photo
-            profile_photo_lbl.grid(row=row_index, column=0, padx=10, pady=20)
-
-            # username
-            Label(current_frame, text=f"@{result}").grid(row=row_index, column=1, padx=10)
-
-            # View profile button
-            Button(current_frame, text="View profile", command=lambda m=result: self.go_to_page(ProfilePage, m)) \
-                .grid(row=row_index, column=2, padx=50)
-
-            row_index += 1
