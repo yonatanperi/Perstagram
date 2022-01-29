@@ -5,13 +5,15 @@ from PIL import ImageTk
 
 
 class TinyUser:
-    def __init__(self, client, username: str, root_frame, order: bool, button_options: tuple = None):
+    def __init__(self, client, username: str, root_frame, order: bool, button_options: tuple = None,
+                 full_button_command=None):
         """
         create a tiny user frame with all the information about it.
         :param client: the regular client
         :param username: the tiny user
-        :param button_options: a tuple of: (text, go_to_page method, page to go when clicked)
         :param order: True - on the bottom, False - on the right
+        :param button_options: a tuple of: (text, go_to_page method, page to go when clicked)
+        :param full_button_command: to preform an entire method
         """
 
         # Create A tiny user Frame
@@ -37,8 +39,10 @@ class TinyUser:
         # button
         if button_options:
             index = 2
+            command = full_button_command if full_button_command else lambda u=username: button_options[1](
+                button_options[2], u)
             Button(self.tiny_user_frame, text=button_options[0],
-                   command=lambda u=username: button_options[1](button_options[2], u)).grid(row=row_method(index),
-                                                                                            column=column_method(index),
-                                                                                            pady=10,
-                                                                                            padx=10)
+                   command=command).grid(row=row_method(index),
+                                         column=column_method(index),
+                                         pady=10,
+                                         padx=10)

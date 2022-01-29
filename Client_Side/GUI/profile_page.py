@@ -1,20 +1,21 @@
 import time
-from typing import Dict, Union, Callable, Any, Tuple, Type
 
 from .smart_scroll_form import SmartScrollForm
 from .tiny_user import TinyUser
 from tkinter import *
 from tkinter.ttk import *
-from PIL import ImageTk
 from .post_object import Post
+from .follow_requests_page import FollowRequestsPage
 
 
 class ProfilePage(SmartScrollForm):
 
     def __init__(self, client, username=None):
 
+        self.client_username = client.get_answer(("get username",))
+
         if not username:  # set default username
-            self.username = client.get_answer(("get username",))
+            self.username = self.client_username
             self.default_user = True  # The client is in his own profile page
         else:
             self.username = username
@@ -22,10 +23,9 @@ class ProfilePage(SmartScrollForm):
 
         self.posts_ids = client.get_answer(("get all posts", self.username))
         self.add_username(self.posts_ids)
+        self.closed_user = not client.get_answer(("is open", self.username))
 
-        super().__init__(client, 1, iter(self.posts_ids),
-                         lambda username, post_id: Post(self.client, username, post_id,
-                                                        self.scroll_frame).post_frame.pack(pady=10))
+        super().__init__(client, 1, iter(self.posts_ids), self.pack_post)  # TODO fix the second one as tlut in stuff
 
         # About bar
         about_frame = Frame(self.scroll_frame)
@@ -39,20 +39,24 @@ class ProfilePage(SmartScrollForm):
 
         # interest users
         self.interest_users = self.client.get_answer(("get interest users", self.username))
-        Label(about_frame, text=f"{len(self.interest_users['follows'])}\nFollowers").grid(row=0, column=2, padx=10)
+        Label(about_frame, text=f"{len(self.interest_users['followers'])}\nFollowers").grid(row=0, column=2, padx=10)
         Label(about_frame, text=f"{len(self.interest_users['following'])}\nFollowing").grid(row=0, column=3, padx=10)
 
         # edit profile / follow button
         if self.default_user:  # edit profile
             self.e_f_button = Button(about_frame, text="Edit Profile", command=self.edit_profile)
+            if self.closed_user:
+                Button(about_frame, text="Follow Requests", command=lambda: self.go_to_page(FollowRequestsPage)).grid(
+                    row=1,
+                    column=3)
         else:
-            if self.client.get_answer(("get username",)) in self.interest_users['follows']:
+            if self.client_username in self.interest_users['followers']:
                 # if the client follows this profile
                 button_text = "unfollow"
             else:  # follow button
                 button_text = "follow"
             self.e_f_button = Button(about_frame, text=button_text, command=self.follow)
-        self.e_f_button.grid(row=1, column=0, columnspan=4, pady=5, sticky="we")
+        self.e_f_button.grid(row=1, column=0, columnspan=3, pady=5, sticky="we")
 
         # bio
         Label(about_frame, text=f"bio: {self.client.get_answer(('get bio', self.username))}").grid(row=2, column=0,
@@ -62,6 +66,9 @@ class ProfilePage(SmartScrollForm):
 
         # Suggestions
         suggestions = self.client.get_answer(("get suggestions",))
+        if self.username in suggestions:
+            suggestions.remove(self.username)
+
         if suggestions:
 
             Label(about_frame, text=f"Check out these users!", font=("Helvetica 16 bold", 16)).grid(row=3, column=0,
@@ -69,10 +76,19 @@ class ProfilePage(SmartScrollForm):
 
             column_index = 0
             for current_username in suggestions:
-                TinyUser(self.client, current_username, about_frame, True, ).tiny_user_frame.grid(
+                TinyUser(self.client, current_username, about_frame, True,
+                         button_options=ProfilePage.get_view_profile_button_options(
+                             self.go_to_page)).tiny_user_frame.grid(
                     row=4,
                     column=column_index)
                 column_index += 1
+
+        # if the user is closed
+        if self.closed_user and (self.client_username not in self.interest_users['followers']) and (not self.default_user):
+            Label(self.scroll_frame, text="User is closed", font=("Helvetica 14 bold", 18)).pack(
+                pady=15,
+                fill='x',
+                expand=True)
 
         # Start packing
         self.start_packing(about_frame)
@@ -89,9 +105,25 @@ class ProfilePage(SmartScrollForm):
         pass
 
     def follow(self):
-        self.client.send_message((self.e_f_button["text"], self.username))
-        time.sleep(1)  # for the server to update the sql
-        self.e_f_button.config(text="follow" if self.e_f_button["text"] == "unfollow" else "unfollow")
+        if self.e_f_button["text"] != "follow requested":
+            self.client.send_message((self.e_f_button["text"], self.username))
+            time.sleep(1)  # for the server to update the sql
+            self.e_f_button.config(text=self.get_new_button_text())
+
+    def pack_post(self, username, post_id):
+        if not self.closed_user:  # there is nothing to pack if closed
+            Post(self.client, username, post_id, self.scroll_frame).post_frame.pack(pady=10)
+
+    def get_new_button_text(self):
+        if self.e_f_button["text"] == "follow":
+            if self.closed_user:
+                text = "follow requested"
+            else:
+                text = "unfollow"
+        else:
+            text = "follow"
+
+        return text
 
     @staticmethod
     def get_view_profile_button_options(go_to_page) -> tuple:

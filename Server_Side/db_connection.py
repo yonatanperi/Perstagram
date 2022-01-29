@@ -173,7 +173,7 @@ class SQL:
             self.cursor.execute(
                 f"""CREATE TABLE IF NOT EXISTS {username}.follow_requests (
                                                             username VARCHAR({self.NAME_MAX_LENGTH}) NOT NULL,
-                                                            FOREIGN KEY (username) REFERENCES perstagram.users_info(username) ON DELETE CASCADE""")
+                                                            FOREIGN KEY (username) REFERENCES perstagram.users_info(username) ON DELETE CASCADE)""")
 
         self.db.commit()
 
@@ -299,7 +299,7 @@ class SQL:
         """
         :return tuple of all the comments ((username, comment), ...)
         """
-        if self.is_open_user(username) or client_username not in self.get_followers(username):
+        if self.is_open_user(username) or client_username in self.get_followers(username):
             self.cursor.execute(f'SELECT username, comment FROM {username}.comments WHERE post_id = %s', (post_id,))
             return self.cursor.fetchall()
         else:
@@ -309,7 +309,7 @@ class SQL:
         """
         :return tuple of all the username of the users who liked the post (username, ...)
         """
-        if self.is_open_user(username) or client_username not in self.get_followers(username):
+        if self.is_open_user(username) or client_username in self.get_followers(username):
             self.cursor.execute(f'SELECT username FROM {username}.likes WHERE post_id = %s', (post_id,))
             return self.ugly_list_2_list(self.cursor.fetchall())
         else:
@@ -323,7 +323,7 @@ class SQL:
         return pickle.loads(self.cursor.fetchall()[0][0])
 
     def get_date(self, username, photo_id, client_username, table):
-        if self.is_open_user(username) or client_username not in self.get_followers(username):
+        if self.is_open_user(username) or client_username in self.get_followers(username):
             self.cursor.execute(f'SELECT date FROM {username}.{table} WHERE id = %s', (photo_id,))
             return self.cursor.fetchall()[0][0]
         else:
@@ -338,7 +338,7 @@ class SQL:
 
         :return the photo
         """
-        if self.is_open_user(username) or client_username not in self.get_followers(username):
+        if self.is_open_user(username) or client_username in self.get_followers(username):
             # remove old stories
             if table == "stories":
                 self.remove_old_stories(username)
@@ -356,12 +356,31 @@ class SQL:
 
     def get_seen_stories(self, client_username):
         """
-        for the user to not see stories again.
+        For the user to not see stories again.
         :param client_username:
         :return: tuple of tuples of the username and id
         """
         self.cursor.execute(f'SELECT username, id FROM {client_username}.seen_stories')
         return self.cursor.fetchall()
+
+    def get_follow_requests(self, client_username):
+        """
+        TO admit them in the future (or not..)
+        :param client_username:
+        :return: ugly tuple of usernames (on purpose)
+        """
+        self.cursor.execute(f'SELECT username FROM {client_username}.follow_requests')
+        return self.cursor.fetchall()
+
+    def admit(self, client_username, username):
+        """
+        Admit the user after the follow request.
+        :param client_username: the admitting one
+        :param username: the admitted one.
+        """
+        self.cursor.execute(f'DELETE FROM {client_username}.follow_requests WHERE username = %s', (username,))
+        self.follow(username, client_username, check_for_open=False)
+        self.insert_direct_message(client_username, username, "This user has just admitted your follow request!")
 
     def seen_story(self, client_username, *args):
         """
@@ -430,7 +449,7 @@ class SQL:
                     f_write.write(line)
 
             else:
-                f_write.write(f"{tag}")
+                f_write.write(f"{tag}\n")
             line_number += 1
 
         f_write.close()
@@ -505,7 +524,7 @@ class SQL:
     def get_interest_users(self, username):
         """
         :param username: the username
-        :return tuple: ((username, follows?, following?), ...)
+        :return tuple: ((username, followers, following), ...)
         """
         self.cursor.execute(f"SELECT * FROM {username}.interest_users")
         return self.cursor.fetchall()
@@ -641,6 +660,9 @@ class SQL:
                 activity_tags = f.read().splitlines()
 
         except FileNotFoundError:  # no recorded activity
+            return []
+
+        if not activity_tags:
             return []
 
         # sort to main tags

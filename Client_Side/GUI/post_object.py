@@ -32,8 +32,9 @@ class Post:
             image_lbl.image = photo
             image_lbl.pack(pady=10, padx=10)
 
-            Label(self.post_frame, text=f"{len(self.post_data['likes'])} Likes!",
-                  font=("Helvetica 18 bold", 10), anchor='w').pack(pady=5, padx=10, fill='both')
+            self.likes_label = Label(self.post_frame, text=f"{len(self.post_data['likes'])} Likes!",
+                                     font=("Helvetica 18 bold", 10), anchor='w')
+            self.likes_label.pack(pady=5, padx=10, fill='both')
 
             opinion_frame = Frame(self.post_frame)
 
@@ -41,14 +42,19 @@ class Post:
             client_username = self.client.get_answer(("get username",))
             if client_username != username:
                 button_text = "Dislike" if client_username in self.post_data['likes'] else "Like"
-                Button(opinion_frame,
-                       text=button_text,
-                       command=lambda: self.client.send_message((button_text.lower(), username, post_id))).grid(row=0,
-                                                                                                                column=0,
-                                                                                                                padx=7)
+                self.like_button = Button(opinion_frame, text=button_text, command=lambda: self.like(username, post_id))
+                self.like_button.grid(row=0, column=0, padx=7)
 
             # view comments button
             Button(opinion_frame,
                    text="View Comments").grid(row=0, column=1, padx=7)  # TODO goto comments form
 
             opinion_frame.pack(pady=5, padx=10)
+
+    def like(self, username, post_id):
+        button_text = self.like_button["text"]
+        self.client.send_message((button_text.lower(), username, post_id))
+        likes = int(self.likes_label["text"][:-6])
+        likes += 1 if button_text == "Like" else -1
+        self.likes_label.config(text=f"{likes} Likes!")
+        self.like_button.config(text="Dislike" if button_text == "Like" else "Like")

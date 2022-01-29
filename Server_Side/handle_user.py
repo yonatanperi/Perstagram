@@ -40,6 +40,9 @@ class HandleUser:
         elif recved[0] == "get username":
             self.client.send_message(self.client.username)
 
+        elif recved[0] == "is open":  # ,  username
+            self.client.send_message(self.sql.is_open_user(recved[1]))
+
         elif recved[0] == "get profile photo":
             self.client.send_message(self.sql.get_profile_photo(recved[1]))
 
@@ -47,14 +50,14 @@ class HandleUser:
             self.client.send_message(self.sql.get_bio(recved[1]))
 
         elif recved[0] == "get interest users":
-            follows = []
+            followers = []
             following = []
             for interest_user in self.sql.get_interest_users(recved[1]):
                 if interest_user[1]:  # follows
-                    follows.append(interest_user[0])
+                    followers.append(interest_user[0])
                 if interest_user[2]:  # following
                     following.append(interest_user[0])
-            self.client.send_message({"follows": follows, "following": following})
+            self.client.send_message({"followers": followers, "following": following})
 
         elif recved[0] == "get suggestions":
             self.client.send_message(self.sql.get_suggestions(self.client.username))
@@ -79,6 +82,12 @@ class HandleUser:
 
         elif recved[0] == "get seen stories":
             self.client.send_message(self.sql.get_seen_stories(self.client.username))
+
+        elif recved[0] == "get follow requests":
+            self.client.send_message(self.sql.get_follow_requests(self.client.username))
+
+        elif recved[0] == "admit":  # , username
+            self.sql.admit(self.client.username, recved[1])  # admit the user
 
         elif recved[0] == "seen story":  # , username, id
             self.sql.seen_story(self.client.username, *recved[1:])

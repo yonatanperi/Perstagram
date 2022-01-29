@@ -18,7 +18,10 @@ class DirectPage(SmartScrollForm):
             os.mkdir(f"direct/{self.client_username}")
 
         # recv new messages
-        for message in client.get_answer(("get direct messages",)):
+        new_messages = client.get_answer(("get direct messages",))
+        self.new_message_usernames = []
+        for message in new_messages:
+            self.new_message_usernames.append(message[0])
             ChatPage.save_message_in_file_system(f"direct/{self.client_username}", message[0], True, *message[1:])
 
         super().__init__(client, 0.4, self.get_direct_users(), self.pack_user_card)
@@ -33,8 +36,12 @@ class DirectPage(SmartScrollForm):
         self.start_packing(top_frame)
 
     def pack_user_card(self, username: str):
-        TinyUser(self.client, username, self.scroll_frame, False, self.view_chat_button_options).tiny_user_frame.pack(
-            fill=X)
+
+        tiny_user_frame = TinyUser(self.client, username, self.scroll_frame, False,
+                                   self.view_chat_button_options).tiny_user_frame
+        if username in self.new_message_usernames:
+            Label(tiny_user_frame, text="NEW MESSAGES!!").grid(row=0, column=3)
+        tiny_user_frame.pack(fill=X)
 
     def get_direct_users(self):
         """
