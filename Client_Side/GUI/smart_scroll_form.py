@@ -6,7 +6,7 @@ from tkinter.ttk import *
 class SmartScrollForm(AppForm):
 
     def __init__(self, client, top_frame_hight_ratio: float, iterable_scrolling_items, pack_item_func,
-                 seen_post: bool = False, bottom_lbl_text: bool = False, direction: bool = False,
+                 seen_post: bool = False, bottom_lbl_text: bool = False,
                  item_load_number_buffer: int = 3):
         """
         Loads ITEM_LOAD_NUMBER_BUFFER items at first.
@@ -18,7 +18,6 @@ class SmartScrollForm(AppForm):
         :param pack_item_func: The method which packs the items
         :param seen_post: just for the home page. send to the server "seen post" message.
         :param bottom_lbl_text: at the bottom, there is a label.
-        :param direction: False - scrolling down, True - scrolling up
         """
         super().__init__(client, self)
 
@@ -28,7 +27,6 @@ class SmartScrollForm(AppForm):
         self.bottom_lbl_text = bottom_lbl_text
         self.scroll_frame = self.get_scrollbar_frame()
         self.pack_item = pack_item_func
-        self.direction = direction
         self.item_load_number_buffer = item_load_number_buffer
 
         self.seen_all_items: bool = False
@@ -51,10 +49,6 @@ class SmartScrollForm(AppForm):
             if index >= self.item_load_number_buffer - 1:
                 break
 
-        if self.direction:
-            # show bottom of canvas
-            self.canvas.yview_moveto('1.0')
-
     def analyze_location(self):
         """
         Activated when the user scrolls.
@@ -76,9 +70,8 @@ class SmartScrollForm(AppForm):
 
         current_item_percentage = (self.top_bar_hight_ratio + self.current_item_index + 1) / (
                 self.top_bar_hight_ratio + len(self.items))
-        condition: bool = percentage_location <= 1 - current_item_percentage if self.direction else percentage_location >= current_item_percentage
 
-        if condition and self.current_item_index < len(self.items):
+        if percentage_location >= current_item_percentage and self.current_item_index < len(self.items):
             # don't even ask about the condition line
             # passed post
             if self.seen_post:

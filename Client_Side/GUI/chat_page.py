@@ -20,7 +20,7 @@ class ChatPage(SmartScrollForm):
         All the chat data is saves on the client side.
         :param username: the user to chat with.
         """
-        super().__init__(client, 0.3, self.load_messages(), self.pack_message)
+        super().__init__(client, 5, self.load_messages(), self.pack_message, item_load_number_buffer=20)
 
         # set main working path
         self.main_path = self.get_main_path(self.client)
@@ -30,7 +30,7 @@ class ChatPage(SmartScrollForm):
 
         # pack initial staff
         top_frame = Frame(self.scroll_frame)
-        TinyUser(self.client, username, self.scroll_frame, True).tiny_user_frame.pack(pady=5)
+        TinyUser(self.client, username, self.scroll_frame, True).tiny_user_frame.pack(pady=5, fill=X)
         self.start_packing(top_frame)
 
         # pack the message box to root
@@ -107,10 +107,10 @@ class ChatPage(SmartScrollForm):
         :param message: the actual message
         """
         if message_sender:
-            anchor = NW
+            anchor = W
             background_color = "gray"
         else:
-            anchor = NE
+            anchor = E
             background_color = "purple"
 
         Label(self.scroll_frame, text=message, background=background_color).pack(anchor=anchor, pady=5)
