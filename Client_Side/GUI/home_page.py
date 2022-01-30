@@ -8,9 +8,9 @@ class HomePage(SmartScrollForm):
 
     def __init__(self, client):
         super().__init__(client, 0.4, self.posts_generator(),
-                         lambda username, post_id: Post(self.client, username, post_id,
-                                                        self.scroll_frame).post_frame.pack(pady=10),
-                         True, "You're all caught up!")
+                         lambda username, post_id: Post(self.client, username, post_id, self.scroll_frame,
+                                                        self.go_to_page, HomePage).post_frame.pack(pady=10), True,
+                         "You're all caught up!")
 
         top_frame = Frame(self.scroll_frame)
         Label(self.scroll_frame, text="perstagram", font=("Billabong", 40)).pack(pady=5)

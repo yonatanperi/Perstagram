@@ -30,8 +30,8 @@ class HandleUser:
 
             # update all the others
             followers = self.sql.get_followers(self.client.username)
-            for followed_user in followers:
-                self.sql.update_latest_posts_stack(self.client.username, followed_user, post_id, post_date)
+            for follower in followers:
+                self.sql.update_latest_posts_stack(follower, self.client.username, post_id, post_date)
 
         elif recved[0] == "post2story":
 
@@ -71,7 +71,7 @@ class HandleUser:
         elif recved[0] == "get suggestions":
             self.client.send_message(self.sql.get_suggestions(self.client.username))
 
-        elif recved[0] == "get post":
+        elif recved[0] == "get post":  # , username, post_id
             # send a dict: {image:, comments:, likes:}
             image = self.sql.get_photo(*recved[1:], "posts", self.client.username)
             comments = self.sql.get_comments(*recved[1:], self.client.username)
@@ -146,6 +146,9 @@ class HandleUser:
         elif recved[0] in ("like", "dislike"):  # , username,  post_id
             {"like": self.sql.like,
              "dislike": self.sql.dislike}[recved[0]](self.client.username, *recved[1:])
+
+        elif recved[0] == "comment":  # , username, post_id, comment
+            self.sql.comment(self.client.username, *recved[1:])
 
         elif recved[0] == "done":
             # for the thread in the chat to know that's it.

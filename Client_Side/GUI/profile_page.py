@@ -1,6 +1,5 @@
 import time
 
-from .close_friends_page import CloseFriendsPage
 from .smart_scroll_form import SmartScrollForm
 from .tiny_user import TinyUser
 from tkinter import *
@@ -8,6 +7,7 @@ from tkinter.ttk import *
 from .post_object import Post
 from .follow_requests_page import FollowRequestsPage
 from .edit_profile_page import EditProfilePage
+from .home_page import HomePage
 
 
 class ProfilePage(SmartScrollForm):
@@ -112,7 +112,7 @@ class ProfilePage(SmartScrollForm):
 
     def pack_post(self, username, post_id):
         if not self.closed_user:  # there is nothing to pack if closed
-            Post(self.client, username, post_id, self.scroll_frame).post_frame.pack(pady=10)
+            Post(self.client, username, post_id, self.scroll_frame, self.go_to_page, HomePage).post_frame.pack(pady=10)
 
     def get_new_button_text(self):
         if self.e_f_button["text"] == "follow":

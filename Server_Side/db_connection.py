@@ -145,7 +145,7 @@ class SQL:
             f"""CREATE TABLE IF NOT EXISTS {username}.interest_users (
                     username VARCHAR({self.NAME_MAX_LENGTH}) NOT NULL,
                     FOREIGN KEY (username) REFERENCES perstagram.users_info(username) ON DELETE CASCADE,
-                    follows BOOLEAN,
+                    followers BOOLEAN,
                     following BOOLEAN)""")
 
         self.cursor.execute(
@@ -317,7 +317,7 @@ class SQL:
         return usernames
 
     def get_followers(self, username):
-        self.cursor.execute(f'SELECT username FROM {username}.interest_users WHERE follows = 1')
+        self.cursor.execute(f'SELECT username FROM {username}.interest_users WHERE followers = 1')
         return self.ugly_list_2_list(self.cursor.fetchall())
 
     def get_following(self, username):
@@ -496,6 +496,30 @@ class SQL:
         self.cursor.execute(f"DELETE FROM {username}.likes WHERE username = %s AND post_id = %s",
                             (client_username, post_id))
 
+        self.db.commit()
+
+    def comment(self, client_username, username, post_id, comment):
+        """
+        comment a post
+        :param client_username: the user who disliked the post
+        :param username: the owner of the post
+        :param post_id: the post id
+        :param comment: the comment
+        """
+        # updating the sql - username schema
+        self.cursor.execute(f"SELECT max(comment_id) from {username}.comments")
+
+        comment_id = self.cursor.fetchall()[0][0]
+        if comment_id == None:  # first post!
+            comment_id = 0
+        else:
+            comment_id += 1
+        self.cursor.execute(
+            f"INSERT INTO {username}.comments (comment_id, username, post_id, comment) VALUES (%s, %s, %s, %s)",
+            (comment_id, client_username, post_id, comment))
+
+        self.db.commit()
+
     def follow(self, follower: str, followed: str, check_for_open: bool = True):
         """
         insert the interest users and the stack on both users
@@ -506,7 +530,7 @@ class SQL:
         # check if open
         if self.is_open_user(followed) or not check_for_open:
             # interest users
-            fs_str = ("follows", "following")
+            fs_str = ("following", "followers")
             fs = (follower, followed)
             for i in range(2):
                 self.cursor.execute(f"SELECT * FROM {fs[i]}.interest_users WHERE username = %s", (fs[1 - i],))
@@ -514,7 +538,7 @@ class SQL:
                     self.cursor.execute(f"UPDATE {fs[i]}.interest_users SET {fs_str[i]} = TRUE")
                 else:
                     self.cursor.execute(
-                        f"INSERT INTO {fs[i]}.interest_users (username, follows, following) VALUES (%s, %s, %s)",
+                        f"INSERT INTO {fs[i]}.interest_users (username, followers, following) VALUES (%s, %s, %s)",
                         (fs[1 - i], i, 1 - i))
 
             # latest_posts_stack

@@ -2,10 +2,11 @@ from tkinter import *
 from tkinter.ttk import *
 
 from PIL import ImageTk
+from .comments_page import CommentsPage
 
 
 class Post:
-    def __init__(self, client, username, post_id, root_frame):
+    def __init__(self, client, username, post_id, root_frame, go_to_page, HomePage):
         """
         create a post frame with all the information about it.
         :param client: the regular client
@@ -47,7 +48,8 @@ class Post:
 
             # view comments button
             Button(opinion_frame,
-                   text="View Comments").grid(row=0, column=1, padx=7)  # TODO goto comments form
+                   text="View Comments",
+                   command=lambda: go_to_page(CommentsPage, username, post_id, HomePage)).grid(row=0, column=1, padx=7)
 
             opinion_frame.pack(pady=5, padx=10)
 
