@@ -1,11 +1,13 @@
 import time
 
+from .close_friends_page import CloseFriendsPage
 from .smart_scroll_form import SmartScrollForm
 from .tiny_user import TinyUser
 from tkinter import *
 from tkinter.ttk import *
 from .post_object import Post
 from .follow_requests_page import FollowRequestsPage
+from .edit_profile_page import EditProfilePage
 
 
 class ProfilePage(SmartScrollForm):
@@ -44,11 +46,12 @@ class ProfilePage(SmartScrollForm):
 
         # edit profile / follow button
         if self.default_user:  # edit profile
-            self.e_f_button = Button(about_frame, text="Edit Profile", command=self.edit_profile)
+            self.e_f_button = Button(about_frame, text="Edit Profile", command=lambda: self.go_to_page(EditProfilePage))
             if self.closed_user:
                 Button(about_frame, text="Follow Requests", command=lambda: self.go_to_page(FollowRequestsPage)).grid(
                     row=1,
-                    column=3)
+                    column=4)
+
         else:
             if self.client_username in self.interest_users['followers']:
                 # if the client follows this profile
@@ -56,7 +59,7 @@ class ProfilePage(SmartScrollForm):
             else:  # follow button
                 button_text = "follow"
             self.e_f_button = Button(about_frame, text=button_text, command=self.follow)
-        self.e_f_button.grid(row=1, column=0, columnspan=3, pady=5, sticky="we")
+        self.e_f_button.grid(row=1, column=0, columnspan=3 if self.default_user else 4, pady=5, sticky="we")
 
         # bio
         Label(about_frame, text=f"bio: {self.client.get_answer(('get bio', self.username))}").grid(row=2, column=0,
@@ -84,7 +87,8 @@ class ProfilePage(SmartScrollForm):
                 column_index += 1
 
         # if the user is closed
-        if self.closed_user and (self.client_username not in self.interest_users['followers']) and (not self.default_user):
+        if self.closed_user and (self.client_username not in self.interest_users['followers']) and (
+                not self.default_user):
             Label(self.scroll_frame, text="User is closed", font=("Helvetica 14 bold", 18)).pack(
                 pady=15,
                 fill='x',
@@ -99,10 +103,6 @@ class ProfilePage(SmartScrollForm):
         """
         for i in range(len(posts_id)):
             posts_id[i] = (self.username, posts_id[i])
-
-    def edit_profile(self):
-        # TODO
-        pass
 
     def follow(self):
         if self.e_f_button["text"] != "follow requested":
@@ -132,4 +132,4 @@ class ProfilePage(SmartScrollForm):
         :param go_to_page: just the self.go_to_page method
         :return: a dict with the text, command of the button
         """
-        return "View profile", go_to_page, ProfilePage
+        return "View Profile", go_to_page, ProfilePage

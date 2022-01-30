@@ -19,6 +19,8 @@ class HandleUser:
     def handle(self):
         recved = self.client.recv_message()  # structure: ["request", *args]
 
+        # TODO put all the commands in lambda dict
+
         if recved[0] == "post":
 
             post_date = datetime.now()
@@ -32,7 +34,14 @@ class HandleUser:
                 self.sql.update_latest_posts_stack(self.client.username, followed_user, post_id, post_date)
 
         elif recved[0] == "post2story":
-            self.sql.upload_image(self.client.username, recved[1], "stories")
+
+            self.sql.upload_image(self.client.username, recved[1], "stories", close_friends=recved[2])
+
+        elif recved[0] == "add to close friends":  # , username
+            self.sql.add_to_close_friends(self.client.username, recved[1])
+
+        elif recved[0] == "get close friends":
+            self.client.send_message(self.sql.get_close_friends(self.client.username))
 
         elif recved[0] == "set profile photo":
             self.sql.set_profile_photo(self.client.username, recved[1])
@@ -75,7 +84,8 @@ class HandleUser:
 
         elif recved[0] == "get stories":  # , username
             # sends the id's
-            self.client.send_message(self.sql.get_user_photos_id(recved[1], "stories"))
+            self.client.send_message(
+                self.sql.get_user_photos_id(recved[1], "stories", client_username=self.client.username))
 
         elif recved[0] == "get story":  # , username, id
             self.client.send_message(self.sql.get_photo(*recved[1:], "stories", self.client.username))
@@ -103,6 +113,9 @@ class HandleUser:
                 self.client.send_message(results)
             else:
                 self.client.send_message([])
+
+        elif recved[0] == "change profile":  # , **kwargs
+            self.sql.change_profile(self.client.username, **recved[1])
 
         elif recved[0] == "seen post":  # , username, post_id
             self.sql.remove_from_latest_posts_stack(self.client.username, *recved[1:])

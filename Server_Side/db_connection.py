@@ -128,52 +128,58 @@ class SQL:
 
         self.cursor.execute(
             f"""CREATE TABLE IF NOT EXISTS {username}.likes (
-                            post_id INT NOT NULL,
-                            FOREIGN KEY (post_id) REFERENCES {username}.posts(id) ON DELETE CASCADE,
-                            username VARCHAR({self.NAME_MAX_LENGTH}) NOT NULL,
-                            FOREIGN KEY (username) REFERENCES perstagram.users_info(username) ON DELETE CASCADE)""")
+                    post_id INT NOT NULL,
+                    FOREIGN KEY (post_id) REFERENCES {username}.posts(id) ON DELETE CASCADE,
+                    username VARCHAR({self.NAME_MAX_LENGTH}) NOT NULL,
+                    FOREIGN KEY (username) REFERENCES perstagram.users_info(username) ON DELETE CASCADE)""")
 
         self.cursor.execute(
             f"""CREATE TABLE IF NOT EXISTS {username}.stories (
-                            id INT NOT NULL PRIMARY KEY,
-                            date DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
-                            byte_photo MEDIUMBLOB NOT NULL,
-                            tags BLOB)""")
+                    id INT NOT NULL PRIMARY KEY,
+                    date DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                    byte_photo MEDIUMBLOB NOT NULL,
+                    tags BLOB NOT NULL,
+                    close_friends BOOLEAN DEFAULT FALSE NOT NULL)""")
 
         self.cursor.execute(
             f"""CREATE TABLE IF NOT EXISTS {username}.interest_users (
-                                    username VARCHAR({self.NAME_MAX_LENGTH}) NOT NULL,
-                                    FOREIGN KEY (username) REFERENCES perstagram.users_info(username) ON DELETE CASCADE,
-                                    follows BOOLEAN,
-                                    following BOOLEAN)""")
+                    username VARCHAR({self.NAME_MAX_LENGTH}) NOT NULL,
+                    FOREIGN KEY (username) REFERENCES perstagram.users_info(username) ON DELETE CASCADE,
+                    follows BOOLEAN,
+                    following BOOLEAN)""")
 
         self.cursor.execute(
             f"""CREATE TABLE IF NOT EXISTS {username}.seen_stories (
-                                    username VARCHAR({self.NAME_MAX_LENGTH}) NOT NULL,
-                                    id INT NOT NULL,
-                                    date DATETIME NOT NULL)""")
+                    username VARCHAR({self.NAME_MAX_LENGTH}) NOT NULL,
+                    id INT NOT NULL,
+                    date DATETIME NOT NULL)""")
 
         self.cursor.execute(
             f"""CREATE TABLE IF NOT EXISTS {username}.direct_messages (
-                                            username VARCHAR({self.NAME_MAX_LENGTH}) NOT NULL,
-                                            date DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
-                                            message VARCHAR({self.DIRECT_MESSAGE_MAX_LENGTH}) NOT NULL)""")
+                    username VARCHAR({self.NAME_MAX_LENGTH}) NOT NULL,
+                    date DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                    message VARCHAR({self.DIRECT_MESSAGE_MAX_LENGTH}) NOT NULL)""")
+
+        self.cursor.execute(
+            f"""CREATE TABLE IF NOT EXISTS {username}.close_friends (
+                    username VARCHAR({self.NAME_MAX_LENGTH}) NOT NULL,
+                    FOREIGN KEY (username) REFERENCES perstagram.users_info(username) ON DELETE CASCADE)""")
 
         # followers - people follows me
         # following - people I follow
 
         self.cursor.execute(
             f"""CREATE TABLE IF NOT EXISTS {username}.latest_posts_stack (
-                                                        username VARCHAR({self.NAME_MAX_LENGTH}) NOT NULL,
-                                                        FOREIGN KEY (username) REFERENCES perstagram.users_info(username) ON DELETE CASCADE,
-                                                        post_id INT NOT NULL,
-                                                        date DATETIME NOT NULL)""")
+                    username VARCHAR({self.NAME_MAX_LENGTH}) NOT NULL,
+                    FOREIGN KEY (username) REFERENCES perstagram.users_info(username) ON DELETE CASCADE,
+                    post_id INT NOT NULL,
+                    date DATETIME NOT NULL)""")
 
         if not open_user:
             self.cursor.execute(
                 f"""CREATE TABLE IF NOT EXISTS {username}.follow_requests (
-                                                            username VARCHAR({self.NAME_MAX_LENGTH}) NOT NULL,
-                                                            FOREIGN KEY (username) REFERENCES perstagram.users_info(username) ON DELETE CASCADE)""")
+                    username VARCHAR({self.NAME_MAX_LENGTH}) NOT NULL,
+                    FOREIGN KEY (username) REFERENCES perstagram.users_info(username) ON DELETE CASCADE)""")
 
         self.db.commit()
 
@@ -287,6 +293,29 @@ class SQL:
 
         self.db.commit()
 
+    def add_to_close_friends(self, client_username, username):
+        """
+        insert to close_friends table
+        :param client_username:
+        :param username:
+        """
+        self.cursor.execute(f"INSERT INTO {client_username}.close_friends (username) VALUES (%s)", (username,))
+        self.db.commit()
+
+    def get_close_friends(self, client_username, ugly_tuple=True):
+        """
+        get the data in close_friends table
+        :param client_username:
+        :param ugly_tuple:
+        :return tuple of all the usernames in the table
+        """
+        self.cursor.execute(f"SELECT username FROM {client_username}.close_friends")
+        usernames = self.cursor.fetchall()
+        if not ugly_tuple:
+            usernames = self.ugly_list_2_list(usernames)
+
+        return usernames
+
     def get_followers(self, username):
         self.cursor.execute(f'SELECT username FROM {username}.interest_users WHERE follows = 1')
         return self.ugly_list_2_list(self.cursor.fetchall())
@@ -340,10 +369,13 @@ class SQL:
         """
         if self.is_open_user(username) or client_username in self.get_followers(username):
             # remove old stories
+            close_friends = ""  # for stories
             if table == "stories":
                 self.remove_old_stories(username)
+                if client_username not in self.get_close_friends(username, ugly_tuple=False):
+                    close_friends = "AND close_friends = FALSE"
 
-            self.cursor.execute(f'SELECT byte_photo FROM {username}.{table} WHERE id = %s', (photo_id,))
+            self.cursor.execute(f'SELECT byte_photo FROM {username}.{table} WHERE id = %s {close_friends}', (photo_id,))
             return pickle.loads(self.cursor.fetchall()[0][0])
         else:
             return "closed!"
@@ -529,10 +561,11 @@ class SQL:
         self.cursor.execute(f"SELECT * FROM {username}.interest_users")
         return self.cursor.fetchall()
 
-    def get_user_photos_id(self, username, table):
+    def get_user_photos_id(self, username, table, client_username=None):
         """
         :param username: the username
         :param table: posts or stories
+        :param client_username: only for close friends stories
 
         :return tuple of all the images ids.
         """
@@ -540,7 +573,10 @@ class SQL:
         if table == "stories":
             self.remove_old_stories(username)
 
-        self.cursor.execute(f'SELECT id FROM {username}.{table} ORDER BY date DESC')
+        close_friends = "" if client_username in self.get_close_friends(
+            username, ugly_tuple=False) or table == "posts" else "WHERE close_friends = FALSE"
+
+        self.cursor.execute(f'SELECT id FROM {username}.{table} {close_friends} ORDER BY date DESC')
         return self.ugly_list_2_list(self.cursor.fetchall())
 
     def get_user_tags(self, username):
@@ -593,12 +629,13 @@ class SQL:
             return self.cursor.fetchall()
         return "Nothing returned!"'''
 
-    def upload_image(self, username, image, table):
+    def upload_image(self, username, image, table, close_friends: bool = False):
         """
         upload post and insert it to the db.
         :param username: the username
         :param image: PIL.Image object
         :param table: posts or stories
+        :param close_friends: only for story, determine who will get to see the story
 
         :return: the post id
         """
@@ -612,8 +649,13 @@ class SQL:
             post_id += 1
 
         # update the user's schema
-        self.cursor.execute(f"INSERT INTO {username}.{table} (id, byte_photo, tags) VALUES (%s, %s, %s)",
-                            (post_id, pickle.dumps(image), pickle.dumps(self.server.classify_image(image))))
+        if table == "stories" and close_friends:
+            self.cursor.execute(
+                f"INSERT INTO {username}.{table} (id, byte_photo, tags, close_friends) VALUES (%s, %s, %s, %s)",
+                (post_id, pickle.dumps(image), pickle.dumps(self.server.classify_image(image)), close_friends))
+        else:
+            self.cursor.execute(f"INSERT INTO {username}.{table} (id, byte_photo, tags) VALUES (%s, %s, %s)",
+                                (post_id, pickle.dumps(image), pickle.dumps(self.server.classify_image(image))))
         self.db.commit()
 
         # update the main schema
@@ -725,6 +767,28 @@ class SQL:
         image = image.resize((100, 100))
         self.cursor.execute("UPDATE users_profile SET profile_photo = %s WHERE username = %s",
                             (pickle.dumps(image), username))
+        self.db.commit()
+
+    def change_profile(self, username, **kwargs):
+        # division to tables
+        self.cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'users_info'")
+        users_info_columns = self.ugly_list_2_list(self.cursor.fetchall())
+
+        self.cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'users_profile'")
+        users_profile_columns = self.ugly_list_2_list(self.cursor.fetchall())
+
+        # change the profile
+        for column_name, value in kwargs.items():
+            if value:
+                if column_name in users_info_columns:
+                    table = "users_info"
+                elif column_name in users_profile_columns:
+                    table = "users_profile"
+                else:
+                    continue
+
+                self.cursor.execute(f"UPDATE {table} SET {column_name} = %s WHERE username = %s", (value, username))
+
         self.db.commit()
 
     def reset_db(self):

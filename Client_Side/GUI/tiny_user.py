@@ -1,6 +1,6 @@
 from tkinter import *
 from tkinter.ttk import *
-
+from inspect import signature
 from PIL import ImageTk
 
 
@@ -13,7 +13,7 @@ class TinyUser:
         :param username: the tiny user
         :param order: True - on the bottom, False - on the right
         :param button_options: a tuple of: (text, go_to_page method, page to go when clicked)
-        :param full_button_command: to preform an entire method
+        :param full_button_command: to preform an entire method, by default pass username in it.
         """
 
         # Create A tiny user Frame
@@ -39,10 +39,19 @@ class TinyUser:
         # button
         if button_options:
             index = 2
-            command = full_button_command if full_button_command else lambda u=username: button_options[1](
-                button_options[2], u)
-            Button(self.tiny_user_frame, text=button_options[0],
-                   command=command).grid(row=row_method(index),
-                                         column=column_method(index),
-                                         pady=10,
-                                         padx=10)
+            # fix full_button_command
+
+            if full_button_command:
+                new_full_button_command = lambda u=username: full_button_command(u) if str(
+                    signature(full_button_command))[1:-1] else full_button_command
+            else:
+                new_full_button_command = None
+
+            self.button_command = new_full_button_command if new_full_button_command else lambda u=username: \
+                button_options[1](
+                    button_options[2], u)
+            self.button = Button(self.tiny_user_frame, text=button_options[0], command=self.button_command)
+            self.button.grid(row=row_method(index),
+                             column=column_method(index),
+                             pady=10,
+                             padx=10)

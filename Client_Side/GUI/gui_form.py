@@ -9,9 +9,9 @@ class GUIForm:
         self.root.title('Perstagram')
         self.client = client
 
-    def go_to_page(self, page, *args):
+    def go_to_page(self, page, *args, **kwargs):
         self.root.destroy()
-        page(self.client, *args).run()
+        page(self.client, *args, **kwargs).run()
 
     def run(self):
         self.root.mainloop()

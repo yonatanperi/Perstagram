@@ -21,8 +21,12 @@ class UploadPage(AppForm):
         Button(self.main_frame, text="Browse A File", command=self.file_dialog).grid(row=1, column=0)
 
         Button(self.main_frame, text="POST", command=lambda: self.button_click("post")).grid(row=3, column=0)
-        Button(self.main_frame, text="POST 2 Story", command=lambda: self.button_click("post2story")).grid(row=3, column=1)
-        Button(self.main_frame, text="Set Profile Photo", command=lambda: self.button_click("set profile photo")).grid(row=3, column=2)
+        Button(self.main_frame, text="POST 2 Story", command=lambda: self.button_click("post2story", False)).grid(row=3,
+                                                                                                                  column=1)
+        Button(self.main_frame, text="POST 2 Close Friends Story",
+               command=lambda: self.button_click("post2story", True)).grid(row=4, column=1)
+        Button(self.main_frame, text="Set Profile Photo", command=lambda: self.button_click("set profile photo")).grid(
+            row=3, column=2)
 
     def file_dialog(self):
         filename = filedialog.askopenfilename(
@@ -42,7 +46,7 @@ class UploadPage(AppForm):
             self.image_lbl.image = photo
             self.image_lbl.grid(row=2, column=0, columnspan=3)
 
-    def button_click(self, button):
+    def button_click(self, button, *args):
         if self.img:
-            self.client.send_message([button, self.img])
+            self.client.send_message([button, self.img, *args])
             self.go_to_page(self.home_page)
