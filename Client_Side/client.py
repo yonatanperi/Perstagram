@@ -18,7 +18,7 @@ class Client:
     def recv_message(self):
         try:
             full_msg = b''
-            msg_len = int(self.client_socket.recv(Client.HEADER_SIZE)[:Client.HEADER_SIZE])
+            msg_len = int(self.client_socket.recv(Client.HEADER_SIZE))
             if msg_len == 0:
                 return
             buffer = Client.BUFFER_SIZE

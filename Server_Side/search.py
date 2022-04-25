@@ -111,7 +111,7 @@ class Search:
 
     def _push_to_node(self, username: str, node: _Node):
         """
-        Like linked-list
+        pushes the splited username to the node (with new nodes)
         :param username: the string path which gets inserted.
         :param node: current node.
         """

@@ -13,7 +13,7 @@ class SmartScrollForm(AppForm):
         When the user scrolls over an item's frame another gets loaded.
         :param client: the client
         :param top_frame_hight_ratio: most of the time, there is a widget at the top of the screen.
-        This is the ratio of it relative to one item.
+        This is the ratio of it relative to one item. must be less than 1.
         :param iterable_scrolling_items: an iterable object of the items.
         :param pack_item_func: The method which packs the items
         :param seen_post: just for the home page. send to the server "seen post" message.
@@ -68,11 +68,16 @@ class SmartScrollForm(AppForm):
         else:
             percentage_location = x / (1 - y + x)
 
-        current_item_percentage = (self.top_bar_hight_ratio + self.current_item_index + 1) / (
-                self.top_bar_hight_ratio + len(self.items))
+        # p(t) = int((m * (t - l) / (1 - l))) + 1
+        # When: p - current_item
+        # t - percentage_location
+        # l - self.top_bar_hight_ratio
+        # m - len(self.items)
 
-        if percentage_location >= current_item_percentage and self.current_item_index < len(self.items):
-            # don't even ask about the condition line
+        current_item = int(
+            (len(self.items) * (percentage_location - self.top_bar_hight_ratio) / (1 - self.top_bar_hight_ratio))) + 1
+
+        if current_item > self.current_item_index and self.current_item_index < len(self.items):
             # passed post
             if self.seen_post:
                 self.client.send_message(("seen post", *self.items[self.current_item_index]))

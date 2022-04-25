@@ -124,7 +124,7 @@ class SQL:
                     FOREIGN KEY (post_id) REFERENCES {username}.posts(id) ON DELETE CASCADE,
                     username VARCHAR({self.NAME_MAX_LENGTH}) NOT NULL,
                     FOREIGN KEY (username) REFERENCES perstagram.users_info(username) ON DELETE CASCADE,
-                    comment VARCHAR({self.BIO_MAX_LENGTH}))""")
+                    comment VARCHAR({self.BIO_MAX_LENGTH})) NOT NULL""")
 
         self.cursor.execute(
             f"""CREATE TABLE IF NOT EXISTS {username}.likes (
@@ -151,6 +151,7 @@ class SQL:
         self.cursor.execute(
             f"""CREATE TABLE IF NOT EXISTS {username}.seen_stories (
                     username VARCHAR({self.NAME_MAX_LENGTH}) NOT NULL,
+                    FOREIGN KEY (username) REFERENCES perstagram.users_info(username) ON DELETE CASCADE,
                     id INT NOT NULL,
                     date DATETIME NOT NULL)""")
 
@@ -437,7 +438,10 @@ class SQL:
         :return PIL image object of the profile photo
         """
         self.cursor.execute("SELECT profile_photo FROM users_profile WHERE username = %s", (username,))
-        profile_photo = self.cursor.fetchall()[0][0]
+        profile_photo = self.cursor.fetchall()
+        if len(profile_photo) > 0:  # just for a random error
+            profile_photo = profile_photo[0][0]
+
         if not profile_photo:  # the user has no profile photo
             # return the default profile photo of the admin: yonatan
             self.cursor.execute("SELECT profile_photo FROM users_profile WHERE username = %s", ("yonatan",))
@@ -704,6 +708,12 @@ class SQL:
 
     @staticmethod
     def get_main_tags(tags, buffer) -> List:
+        """
+        sort the long tags list of all the users posts
+        :param tags: all the tags
+        :param buffer: max amount of possible tags
+        :return: the sorted tags
+        """
         # set the main tags
         main_tags = []
         for i in range(buffer):

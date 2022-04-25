@@ -27,7 +27,7 @@ class ProfilePage(SmartScrollForm):
         self.add_username(self.posts_ids)
         self.closed_user = not client.get_answer(("is open", self.username))
 
-        super().__init__(client, 1, iter(self.posts_ids), self.pack_post)  # TODO fix the second one as tlut in stuff
+        super().__init__(client, 0.5, iter(self.posts_ids), self.pack_post)
 
         # About bar
         about_frame = Frame(self.scroll_frame)

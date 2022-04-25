@@ -15,13 +15,13 @@ class Client:
     def recv_message(self):
         try:
             full_msg = b''
-            msg_len = int(self.socket.recv(Client.HEADER_SIZE)[:Client.HEADER_SIZE])
+            msg_len = int(self.socket.recv(Client.HEADER_SIZE))
             if msg_len == 0:
                 return
             buffer = Client.BUFFER_SIZE
 
             while len(full_msg) != msg_len:
-                if msg_len - len(full_msg) < Client.BUFFER_SIZE:
+                if msg_len - len(full_msg) < Client.BUFFER_SIZE:  #
                     buffer = msg_len - len(full_msg)
                 msg = self.socket.recv(buffer)
                 full_msg += msg

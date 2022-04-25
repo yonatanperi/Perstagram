@@ -12,6 +12,9 @@ class Post:
         :param client: the regular client
         :param username: the owner of the post
         :param post_id: just the post id
+        :param root_frame: the working frame
+        :param go_to_page: the go_to_page method of the class
+        :param HomePage: the HomePage class
         """
         self.root = root_frame
         self.client = client

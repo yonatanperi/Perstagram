@@ -69,12 +69,15 @@ class AppForm(GUIForm):
 
     def analyze_location(self):
         """
-        Check when the user viewed a frame.
+        Activated when the user scrolls
         """
         pass
 
     def get_scrollbar_frame(self):
-
+        """
+        for apps needs a scrollbar
+        :return: a scrollbar frame for the full canvas.
+        """
         self.passed_post = False  # Will change
 
         # Create A Main Frame
